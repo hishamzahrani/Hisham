@@ -478,3 +478,8 @@ h1, h2, .unit-title span, .ub-text b { font-family: "Reem Kufi", "Tajawal", "Ami
 .ayah-hidden .ayah-dots { display: inline-block; min-width: 5.5em; letter-spacing: .25em; color: var(--muted); font-family: "Tajawal", sans-serif; font-size: .8em; vertical-align: middle; }
 .ayah.ayah-reveal .ayah-text { animation: ayahIn .45s ease; }
 @keyframes ayahIn { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: none; } }
+.field { width: 100%; box-sizing: border-box; padding: 12px 14px; margin: 6px 0 10px; border: 2px solid var(--line, #e3dccb); border-radius: 14px; background: var(--surface); color: var(--text); font: inherit; font-size: 16px; }
+.field:focus { outline: none; border-color: var(--primary); }
+#ch-code { text-align: right; }
+.ch-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; color: var(--muted); font-size: 13px; }
+.ch-or::before, .ch-or::after { content: ""; flex: 1; height: 1px; background: var(--line, #e3dccb); }

@@ -26,6 +26,9 @@ const MONETIZATION = {
   checkoutLinks: { monthly: "", yearly: "", family: "" },  // روابط Stripe Payment Links
   licenseApi: "",             // خادم يتحقق من رمز الاشتراك ويعيد {valid, plan, until}
 
+  // رابط نسخة الويب المنشورة (مثل https://example.com/) لتُرسل روابط التحدي؛ إن تُرك فارغًا يُرسل رمز التحدي وحده
+  shareUrl: "",
+
   privacyUrl: "privacy.html",
   termsUrl: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
   scholarshipContact: "",     // وسيلة طلب المنحة المجانية لغير القادرين

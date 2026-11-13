@@ -708,8 +708,8 @@
     if (!items.length) { toast("لا توجد أسئلة متاحة بعد"); return; }
     if (usesHearts(mode) && heartsLeft() <= 0) { openHearts(); return; }
     L = {
-      mode, meta,
-      queue: shuffle(items),
+      mode, meta, items,
+      queue: meta.fixed ? items.slice() : shuffle(items),
       total: items.length,
       done: 0,
       hearts: usesHearts(mode) ? heartsLeft() : Infinity,
@@ -912,7 +912,7 @@
     } else {
       L.mistakes++;
       if (usesHearts(L.mode)) { loseHeart(); L.hearts = heartsLeft(); }
-      L.queue.push(L.cur);
+      if (L.mode !== "challenge") L.queue.push(L.cur); // في التحدي يُحسب الجواب الأول فقط
       if (!state.mistakes.includes(id)) state.mistakes.push(id);
       sfx.bad();
       const h = $("screen-lesson").querySelector(".hearts");
@@ -944,8 +944,81 @@
     if (L.cur.q.t !== "match" && L.selection != null) checkMCQ();
   }
 
+  // ------------------------------------------------------------------
+  // تحدّي صديق: عشرة أسئلة ثابتة يُرسل رمزها أو رابطها، فيجيب الصديق عن الأسئلة نفسها بالترتيب نفسه
+  // لا يحتاج خادمًا: الرمز يحمل أرقام الأسئلة واسم المتحدّي ونتيجته ووقته
+  // ------------------------------------------------------------------
+  const CH_SIZE = 10;
+  const b64e = (str) => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const b64d = (b) => decodeURIComponent(escape(atob(b.replace(/-/g, "+").replace(/_/g, "/"))));
+  const encodeCh = (o) => "QQ" + b64e(JSON.stringify(o));
+  function decodeCh(text) {
+    const m = String(text || "").match(/QQ([A-Za-z0-9_-]{10,})/);
+    if (!m) return null;
+    try {
+      const o = JSON.parse(b64d(m[1]));
+      const items = (o.q || []).map(qById).filter(Boolean);
+      if (items.length < 5) return null;
+      return { name: String(o.n || "صديقك").slice(0, 30), q: o.q, items, score: +o.s || 0, ms: +o.t || 0, total: items.length };
+    } catch (_) { return null; }
+  }
+  const shareBase = () => {
+    const cfg = (MONETIZATION && MONETIZATION.shareUrl) || "";
+    if (cfg) return cfg;
+    return /^https?:$/.test(location.protocol) && !/^(localhost|127\.)/.test(location.hostname) && !/claudeusercontent|claude\.ai/.test(location.hostname)
+      ? location.origin + location.pathname : "";
+  };
+  const fmtSec = (ms) => `${toAr(Math.round(ms / 1000))} ث`;
+  function playerName() {
+    const v = ($("ch-name") && $("ch-name").value.trim()) || state.name || "";
+    if (v && v !== state.name) { state.name = v.slice(0, 30); save(); }
+    return state.name || "صديقك";
+  }
+  function createChallenge() {
+    playerName();
+    let pool = [];
+    STAGES.forEach((st) => { if (isSubUnlocked(st.juz, 1)) pool = pool.concat(juzItems(st.juz)); });
+    if (!pool.length) pool = juzItems(30);
+    const items = diverseSample(pool, CH_SIZE);
+    startLesson("challenge", items, { fixed: true, t0: Date.now() });
+  }
+  function acceptChallenge(text) {
+    const ch = decodeCh(text);
+    if (!ch) { sfx.bad(); toast("الرمز غير صحيح، تأكد من نسخه كاملًا"); return; }
+    ask(`تحدّاك ${ch.name}`, `${toAr(ch.total)} أسئلة بالترتيب نفسه. نتيجته ${toAr(ch.score)} من ${toAr(ch.total)} في ${fmtSec(ch.ms)}. لا تُنقص القلوب، ويُحسب الجواب الأول فقط.`, "ابدأ التحدي")
+      .then((ok) => { if (ok) startLesson("challenge", ch.items, { fixed: true, t0: Date.now(), vs: ch }); });
+  }
+  async function shareText(text) {
+    try {
+      if (navigator.share) { await navigator.share({ text }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(text); toast("نُسخ النص، الصقه لصديقك"); }
+    catch (_) { window.prompt("انسخ هذا النص وأرسله لصديقك:", text); }
+  }
+  function shareChallengeResult() {
+    const r = L && L.meta && L.meta.result;
+    if (!r) return;
+    const base = shareBase();
+    if (r.vs) {
+      const verdict = r.score > r.vs.score ? "فزتُ" : r.score < r.vs.score ? "فاز" : "تعادلنا";
+      shareText(`مسابقات قرآنية — نتيجة تحدي ${r.vs.name}:\nأنا ${toAr(r.score)} من ${toAr(r.total)} (${fmtSec(r.ms)})، و${r.vs.name} ${toAr(r.vs.score)} من ${toAr(r.vs.total)} (${fmtSec(r.vs.ms)}). ${verdict === "فاز" ? "فاز " + r.vs.name : verdict}!`);
+      return;
+    }
+    const code = encodeCh({ v: 1, n: state.name || "صديقك", q: r.q, s: r.score, t: r.ms });
+    shareText(`تحدّاك ${state.name || "صديقك"} في «مسابقات قرآنية»: أجاب عن ${toAr(r.score)} من ${toAr(r.total)} أسئلة في ${fmtSec(r.ms)}. هل تغلبه؟\n` +
+      (base ? `${base}#c=${code}\n` : "") + `أو افتح التطبيق ← المراجعة ← تحدَّ صديقًا، والصق الرمز:\n${code}`);
+  }
+  function checkIncomingChallenge() {
+    const h = location.hash || "";
+    if (!/^#c=/.test(h)) return;
+    const code = h.slice(3);
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (_) {}
+    setTimeout(() => acceptChallenge(code), 300);
+  }
+
   // ---------- إنهاء الدرس ----------
   function finishLesson(passed) {
+    if (L.mode === "challenge") return finishChallenge();
     const acc = L.attempts ? Math.round(((L.attempts - L.mistakes) / L.attempts) * 100) : 0;
     let xp = 0, stars = 0, firstClear = false;
     const { juz: j, k, u } = L.meta;
@@ -1013,6 +1086,39 @@
     if (passed) sfx.win(); else sfx.bad();
   }
 
+  function finishChallenge() {
+    const ms = Date.now() - L.meta.t0, total = L.total, score = Math.max(0, total - L.mistakes);
+    const vs = L.meta.vs;
+    L.meta.result = { q: L.meta.vs ? vs.q : L.items.map((it) => it.id), score, total, ms, vs };
+    const xp = score * 2;
+    state.xp += xp;
+    if (state.daily.day !== dayKey()) state.daily = { day: dayKey(), xp: 0 };
+    state.daily.xp += xp;
+    save();
+    let title, sub, win = true;
+    if (vs) {
+      const d = score - vs.score || (vs.ms - ms > 0 ? 1 : vs.ms - ms < 0 ? -1 : 0);
+      win = d > 0;
+      title = d > 0 ? "فزتَ بالتحدي!" : d < 0 ? `فاز ${vs.name}` : "تعادل!";
+      sub = `أنت ${toAr(score)} من ${toAr(total)} في ${fmtSec(ms)} — ${vs.name} ${toAr(vs.score)} من ${toAr(vs.total)} في ${fmtSec(vs.ms)}` +
+        (score === vs.score ? " (عند تساوي الإجابات يفوز الأسرع)" : "");
+    } else {
+      title = "أنهيت التحدي";
+      sub = `أجبت عن ${toAr(score)} من ${toAr(total)} في ${fmtSec(ms)}. أرسل التحدي لصديق ليجيب عن الأسئلة نفسها.`;
+    }
+    $("r-emoji").className = "result-emoji " + (win ? "win" : "fail");
+    $("r-emoji").innerHTML = ic(win ? "trophy" : "heartBroken", "", false);
+    $("r-title").textContent = title;
+    $("r-sub").textContent = sub;
+    $("r-stars").innerHTML = "";
+    $("r-xp").textContent = `+${toAr(xp)}`;
+    $("r-acc").textContent = `${toAr(Math.round((score / total) * 100))}٪`;
+    $("btn-retry").style.display = "";
+    $("btn-retry").textContent = vs ? "أرسل النتيجة" : "أرسل التحدي لصديق";
+    show("screen-result");
+    if (win) sfx.win(); else sfx.bad();
+  }
+
   // ------------------------------------------------------------------
   // التنقل
   // ------------------------------------------------------------------
@@ -1055,9 +1161,13 @@
       else if (mode === "unit") startUnit(meta.u);
       else if (mode === "skill") startSkill(meta.cat);
       else if (mode === "gate") startGate(meta.juz);
+      else if (mode === "challenge") shareChallengeResult();
       else startReview();
     });
     $("btn-review").addEventListener("click", startReview);
+    $("ch-create").addEventListener("click", createChallenge);
+    $("ch-accept").addEventListener("click", () => acceptChallenge($("ch-code").value));
+    if (state.name) $("ch-name").value = state.name;
     $("btn-plus").addEventListener("click", openPlus);
     $("plus-close").addEventListener("click", () => show("screen-home"));
     $("plus-cta").addEventListener("click", subscribe);
@@ -1093,6 +1203,7 @@
   bind();
   renderHome();
   initStore();
+  checkIncomingChallenge();
 
   if (!NP && "serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load", () => {
