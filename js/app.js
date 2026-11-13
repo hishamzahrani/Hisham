@@ -123,6 +123,45 @@
   const ORN_SVG = '<svg class="orn" viewBox="0 0 18 40" aria-hidden="true" fill="currentColor"><path d="M2 1C9 7 11.2 13.2 11.2 20S9 33 2 39C5.6 32.6 6.6 26.4 6.6 20S5.6 7.4 2 1z"/><path fill-rule="evenodd" d="M14.6 14.2l2.7 5.8-2.7 5.8-2.7-5.8zM14.6 18.2l.85 1.8-.85 1.8-.85-1.8z"/><circle cx="10.3" cy="10.5" r="1.1"/><circle cx="10.3" cy="29.5" r="1.1"/></svg>';
   const ORN_OPEN = ORN_SVG.replace('class="orn"', 'class="orn orn-open"');
   const ORN_CLOSE = ORN_SVG.replace('class="orn"', 'class="orn orn-close"');
+  // عرض الآية؛ إن كانت تفضح الجواب أُخفي نصها (وتبقى الأقواس) حتى يُجاب، وكذا اسم السورة إن دلّ عليه
+  function renderAyah(q, reveal) {
+    const box = $("q-ayah");
+    if (!q.a && !q.r) { box.innerHTML = ""; return; }
+    const leak = reveal ? null : leakOf(q);
+    const refLeak = leak && leak.some((w) => wordsAr(String(q.r || "").replace(/[\d:\-–\s]+$/, "")).has(w));
+    const text = !q.a ? "" : leak
+      ? `<div class="ayah-text ayah-hidden" dir="rtl" title="تظهر الآية بعد الإجابة">${ORN_OPEN}<span class="ayah-dots">• • •</span>${ORN_CLOSE}</div>`
+      : `<div class="ayah-text${ayahSize(q.a)}" dir="rtl">${ayahHtml(q.a)}</div>`;
+    const ref = !q.r ? "" : refLeak ? `<div class="ayah-ref">[تظهر بعد الإجابة]</div>` : `<div class="ayah-ref">[${esc(q.r)}]</div>`;
+    box.innerHTML = text + ref;
+    if (reveal) box.classList.add("ayah-reveal");
+    else box.classList.remove("ayah-reveal");
+  }
+  // <leak>
+  // كشف الأسئلة التي تفضح فيها الآيةُ أو اسمُ السورة الجوابَ الصحيح:
+  // كلمة في الجواب الصحيح موجودة في الآية/اسم السورة، وليست في نص السؤال، ولا تشترك فيها الخيارات الأخرى بالقدر نفسه
+  const LEAK_STOP = new Set("من في على الى عن الذي التي الذين ما لا لم لن ان او ثم هو هي هم كان كانت قد كل بعد قبل عند اذا اذ هذا هذه ذلك تلك الله سوره ايه ايات القران لله بالله ولله".split(" "));
+  function normAr(t) {
+    return String(t).replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي");
+  }
+  function stemAr(w) {
+    w = w.replace(/^(و|ف)(?=..)/, "").replace(/^(بال|كال|فال|لل|ال|ب|ل|ك)(?=...)/, "");
+    return w.replace(/(ون|ين|ات|ان|ها|هم|هما|كم|نا|ه)$/,(x) => (w.length - x.length >= 3 ? "" : x));
+  }
+  function wordsAr(t) {
+    return new Set(normAr(t).split(/[^\u0621-\u064A]+/).filter((w) => w.length >= 2 && !LEAK_STOP.has(w)).map(stemAr).filter((w) => w.length >= 3 && !LEAK_STOP.has(w)));
+  }
+  function leakOf(q) {
+    if (q.t === "match" || q.t === "tf" || !q.o || !(q.a || q.r)) return null;
+    const ctx = wordsAr((q.a || "") + " " + String(q.r || "").replace(/[\d:\-–\s]+$/, ""));
+    const asked = wordsAr(q.q);
+    const hits = (o) => [...wordsAr(o)].filter((w) => ctx.has(w) && !asked.has(w));
+    const h0 = hits(q.o[0]);
+    if (!h0.length) return null;
+    const best = Math.max(0, ...q.o.slice(1).map((o) => hits(o).length));
+    return h0.length > best ? h0 : null;
+  }
+  // </leak>
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
     .replace(/[\uFD3E\uFD3F]/g, (c) => (c === "\uFD3E" ? ORN_OPEN : ORN_CLOSE)); // أقواس الآيات بخط المصحف
   const toAr = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
@@ -721,7 +760,7 @@
     chip.style.background = cat.color;
     chip.innerHTML = `${ic(cat.icon)}<span>${cat.name}${L.mode !== "stage" ? " — الجزء " + toAr(juz) : ""}</span>`;
     $("q-text").innerHTML = esc(q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q);
-    $("q-ayah").innerHTML = q.a ? `<div class="ayah-text${ayahSize(q.a)}" dir="rtl">${ayahHtml(q.a)}</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
+    renderAyah(q, false);
 
     const footer = $("lesson-footer");
     footer.classList.remove("ok", "bad");
@@ -878,6 +917,7 @@
     $("fb-title").textContent = ok ? pick(["أحسنت!", "ممتاز!", "بارك الله فيك!", "إجابة صحيحة!"]) : "الإجابة الصحيحة:";
     $("fb-answer").textContent = !ok && correctText ? correctText : "";
     $("fb-explain").innerHTML = esc(q.e || "");
+    if (q.a && leakOf(q)) renderAyah(q, true); // كشف الآية المخفية بعد الإجابة
     const src = sourceOf(q);
     $("fb-source").innerHTML = `${ic("sources")} <b>${esc(src.label)}:</b> ${esc(src.text)}` +
       (q.verified ? ` <span class="verified">${ic("seal")}موثّق من المكتبة الشاملة</span>` : "");

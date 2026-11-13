@@ -475,3 +475,6 @@ h1, h2, .unit-title span, .ub-text b { font-family: "Reem Kufi", "Tajawal", "Ami
 .ayah .orn { margin: 0 .06em; }
 .brand-mark { display: inline-flex; align-items: center; }
 .brand-mark .orn { height: 1.25em; width: .55em; }
+.ayah-hidden .ayah-dots { display: inline-block; min-width: 5.5em; letter-spacing: .25em; color: var(--muted); font-family: "Tajawal", sans-serif; font-size: .8em; vertical-align: middle; }
+.ayah.ayah-reveal .ayah-text { animation: ayahIn .45s ease; }
+@keyframes ayahIn { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: none; } }
