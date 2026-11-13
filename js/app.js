@@ -678,9 +678,10 @@
 
   const startStage = (j, k) => startLesson("stage", itemsForSub(j, k), { juz: j, k });
   const startUnit = (u) => startLesson("unit", itemsForUnit(u), { u });
-  // مراجعة الدخول: قبل أول درس في الجزء j تُعرض ٥ أسئلة من كل جزء سبقه (من ٣٠ إلى j+1)
+  // مراجعة الدخول: قبل أول درس في الجزء j تُعرض ٥ أسئلة من كل جزء من الأجزاء الستة التي قبله
   const GATE_PER_JUZ = 5;
-  const gateJuzs = (j) => STAGES.map((s) => s.juz).filter((x) => x > j).sort((a, b) => b - a);
+  const GATE_SPAN = 6;     // من الأجزاء الستة السابقة فقط → ٣٠ سؤالًا حدًّا أعلى
+  const gateJuzs = (j) => STAGES.map((s) => s.juz).filter((x) => x > j).sort((a, b) => a - b).slice(0, GATE_SPAN).reverse();
   const needsGate = (j) => gateJuzs(j).length > 0 && !state.gates[j] && !subDone(j, 1);
   function itemsForGate(j) {
     return gateJuzs(j).flatMap((x) => diverseSample(juzItems(x), GATE_PER_JUZ));
