@@ -25,8 +25,9 @@
   // كل درس من دروس العلوم يأخذ موضعًا نسبيًا في الرحلة بحسب ترتيبه في علمه،
   // فتنتشر دروس كل علم على الرحلة كلها من الأسهل إلى الأصعب، وتجتمع في كل محطة علوم مختلفة.
   const TOPICS = [];
-  SCIENCES.forEach((s, so) => s.lessons.forEach((l, li) => TOPICS.push({ sid: s.id, li, so, f: (li + 0.5) / s.lessons.length })));
-  TOPICS.sort((a, b) => a.f - b.f || a.so - b.so);
+  SCIENCES.forEach((s, so) => s.lessons.forEach((l, li) => TOPICS.push({ sid: s.id, li, so, age: l.age || 22, f: (li + 0.5) / s.lessons.length })));
+  // الترتيب بالمستوى (العمر التقديري في levels.js)، ثم بموضع الدرس في علمه، فتبدأ الرحلة بالأيسر وتنتهي بالأصعب
+  TOPICS.sort((a, b) => a.age - b.age || a.f - b.f || a.so - b.so);
 
   const STATIONS = SCHOLARS.map((sch, k) => {
     const from = Math.round(k * TOPICS.length / SCHOLARS.length), to = Math.round((k + 1) * TOPICS.length / SCHOLARS.length);
@@ -46,6 +47,8 @@
     const ref = `«${src.book}» لـ${src.author}، ${/^[٠-٩]+\//.test(src.page) ? "" : "ص "}${src.page}`;
     return `<div class="src">📚 المصدر: ${src.url ? `<a href="${src.url}" target="_blank" rel="noopener">${ref}</a>` : `<b>${ref}</b>`} <span class="muted">(${src.via || "المكتبة الشاملة"})</span></div>`;
   };
+  const ageOf = qids => { const t = topicsOf(qids); return t.reduce((a, x) => a + (bySci(x.sid).lessons[x.li].age || 22), 0) / t.length; };
+  const levelName = age => age < 19 ? "تمهيدي (١٥–١٨ سنة)" : age < 25 ? "متوسط (١٩–٢٤ سنة)" : "متقدم (٢٥–٣٠ سنة)";
   const topicsOf = qids => [...new Set(qids.map(id => id.split(".").slice(0, 2).join(".")))].map(t => { const [sid, li] = t.split("."); return { sid, li: +li }; });
 
   /* ---------- الحالة ---------- */
@@ -315,7 +318,7 @@
     setTab("home"); document.body.classList.add("in-lesson"); window.scrollTo(0, 0);
     $view.innerHTML = `
       <button class="back" data-act="home">→ الخريطة</button>
-      <div class="q-kind">محطة ${st.short} · المرحلة ${AR(j + 1)} من ${AR(st.stages.length)}</div>
+      <div class="q-kind">محطة ${st.short} · المرحلة ${AR(j + 1)} من ${AR(st.stages.length)} · المستوى: ${levelName(ageOf(qids))}</div>
       <h1>${AR(qids.length)} أسئلة متنوعة</h1>
       <div class="chips">${sciNames(qids).map(n => { const s = SCIENCES.find(x => x.name === n); return `<span class="chip" style="--c:${s.color}">${n}</span>`; }).join("")}</div>
       <button class="btn btn-block" style="margin:14px 0" data-act="start" data-k="${k}" data-j="${j}">ابدأ المرحلة ←</button>
