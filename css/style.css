@@ -100,13 +100,18 @@ button { font-family: inherit; }
   display: flex; justify-content: space-between; align-items: center;
   box-shadow: inset 0 -4px 0 rgba(0,0,0,.18);
 }
-.unit-banner b { font-size: 17px; display: block; }
-.unit-banner small { opacity: .92; }
-.unit-banner .unit-num { font-size: 28px; font-weight: 800; opacity: .9; }
+.unit-banner.locked { background: var(--locked); color: var(--muted); }
+.ub-text { min-width: 0; }
+.ub-text b { font-size: 18px; display: block; line-height: 1.3; }
+.ub-text small { display: block; opacity: .92; font-size: 13px; }
+.ub-progress {
+  flex: none; font-weight: 800; font-size: 16px; background: rgba(255,255,255,.22);
+  border-radius: 12px; padding: 6px 10px; min-width: 48px; text-align: center;
+}
 
 .node-wrap { position: relative; margin: 8px 0; display: flex; flex-direction: column; align-items: center; transition: transform .2s; }
 .node {
-  width: 74px; height: 70px; border-radius: 50%; border: none; cursor: pointer;
+  width: 66px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
   background: var(--green); color: #fff; font-size: 26px; font-weight: 800;
   box-shadow: 0 7px 0 var(--green-dark);
   display: grid; place-items: center; position: relative;
@@ -115,12 +120,14 @@ button { font-family: inherit; }
 .node:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--green-dark); }
 .node.locked { background: var(--locked); color: var(--muted); box-shadow: 0 7px 0 var(--locked-dark); cursor: pointer; }
 .node.done { background: var(--gold); box-shadow: 0 7px 0 var(--gold-dark); }
+.node.test { width: 78px; height: 74px; font-size: 32px; }
+.node.test:not(.locked):not(.done) { background: #ce82ff; box-shadow: 0 7px 0 #a568cc; }
 .node.current::after {
   content: ""; position: absolute; inset: -9px; border-radius: 50%;
   border: 4px solid var(--green); opacity: .35; animation: pulse 1.6s infinite;
 }
 @keyframes pulse { 0%{transform:scale(.92);opacity:.5} 70%{transform:scale(1.1);opacity:0} 100%{opacity:0} }
-.node-label { margin-top: 12px; font-size: 13px; color: var(--muted); text-align: center; max-width: 150px; line-height: 1.3; }
+.node-label { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; max-width: 150px; line-height: 1.3; }
 .node-stars { font-size: 12px; letter-spacing: 1px; min-height: 16px; }
 .start-bubble {
   position: absolute; top: -40px; background: var(--surface); border: 2px solid var(--line);

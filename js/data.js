@@ -1153,3 +1153,22 @@ const STAGES = [
     ],
   },
 ];
+
+// ------------------------------------------------------------------
+// أدوات لإضافة الأسئلة من ملفات js/more-*.js
+// ------------------------------------------------------------------
+/** اختيار من متعدد: الخيار الأول هو الصحيح */
+function mcq(c, a, r, q, o, e) { return { t: "mcq", c, a, r, q, o, e }; }
+/** مطابقة كلمات بمعانيها */
+function match(p, e, c = "mufradat") { return { t: "match", c, q: "صِلْ كل كلمة بمعناها", p, e }; }
+/** صح أم خطأ: v = true إذا كانت العبارة صحيحة */
+function tf(c, q, v, e, a, r) { return { t: "tf", c, q, v, e, a, r }; }
+/** مكية أم مدنية */
+function makkiQ(surah, isMakki, e, a, r) {
+  return { t: "mcq", c: "makki", a, r, q: `سورة ${surah}:`, o: isMakki ? ["مكية", "مدنية"] : ["مدنية", "مكية"], e };
+}
+/** إضافة أسئلة إلى جزء */
+function addQ(juz, list) {
+  const s = STAGES.find((x) => x.juz === juz);
+  if (s) s.questions.push(...list);
+}

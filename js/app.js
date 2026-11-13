@@ -2,18 +2,34 @@
   "use strict";
 
   // ------------------------------------------------------------------
-  // التخزين
+  // الإعدادات
   // ------------------------------------------------------------------
   const STORE_KEY = "quran-quest-v1";
   const DAILY_GOAL = 30;
   const MAX_HEARTS = 5;
+  const TEST_SIZE = 8;
 
+  // المراحل الفرعية السبع لكل جزء
+  const SUBS = [
+    { k: 1, cat: "mufradat", short: "المفردات" },
+    { k: 2, cat: "nuzul",    short: "أسباب النزول" },
+    { k: 3, cat: "tafsir",   short: "التفسير" },
+    { k: 4, cat: "balagha",  short: "البلاغة" },
+    { k: 5, cat: "maqasid",  short: "دلالة السورة" },
+    { k: 6, cat: "makki",    short: "مكي ومدني" },
+    { k: 7, cat: null,       short: "اختبار الجزء", test: true },
+  ];
+  const SUB_COUNT = SUBS.length;
+
+  // ------------------------------------------------------------------
+  // التخزين
+  // ------------------------------------------------------------------
   const defaultState = () => ({
     xp: 0,
     streak: 0,
     lastDay: null,
     daily: { day: null, xp: 0 },
-    progress: {},          // { [juz]: { stars, best } }
+    progress: {},          // { [juz]: { subs: { [k]: stars } } }
     stats: {},             // { [cat]: { c, t } }
     mistakes: [],          // ["juz:index", ...]
     sound: true,
@@ -22,11 +38,21 @@
   let state = load();
 
   function load() {
+    let s = defaultState();
     try {
       const raw = localStorage.getItem(STORE_KEY);
-      if (raw) return Object.assign(defaultState(), JSON.parse(raw));
+      if (raw) s = Object.assign(defaultState(), JSON.parse(raw));
     } catch (_) { /* التخزين غير متاح */ }
-    return defaultState();
+    // ترحيل من الإصدار السابق (مرحلة واحدة لكل جزء)
+    Object.keys(s.progress).forEach((j) => {
+      const p = s.progress[j];
+      if (p && !p.subs) {
+        const subs = {};
+        for (let k = 1; k <= SUB_COUNT; k++) subs[k] = p.stars || 1;
+        s.progress[j] = { subs };
+      }
+    });
+    return s;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) {}
@@ -54,6 +80,7 @@
   const toAr = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
   const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
   const stageByJuz = (j) => STAGES.find((s) => s.juz === j);
   const qById = (id) => {
@@ -61,13 +88,24 @@
     const s = stageByJuz(j);
     return s && s.questions[i] ? { id, juz: j, q: s.questions[i] } : null;
   };
+  const juzItems = (j) => stageByJuz(j).questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q }));
 
-  function isUnlocked(juz) {
-    if (juz === 30) return true;
-    return !!state.progress[juz + 1];
+  // ---------- التقدّم ----------
+  const subStars = (j, k) => (state.progress[j] && state.progress[j].subs[k]) || 0;
+  const subDone = (j, k) => subStars(j, k) > 0;
+  const juzDone = (j) => subDone(j, SUB_COUNT);
+  const juzSubsDone = (j) => SUBS.filter((s) => subDone(j, s.k)).length;
+
+  function isSubUnlocked(j, k) {
+    if (k === 1) return j === 30 || juzDone(j + 1);
+    return subDone(j, k - 1);
   }
-  function currentJuz() {
-    for (let j = 30; j >= 1; j--) if (!state.progress[j]) return j;
+  function currentSub() {
+    for (let j = 30; j >= 1; j--) {
+      for (let k = 1; k <= SUB_COUNT; k++) {
+        if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : null;
+      }
+    }
     return null;
   }
 
@@ -112,32 +150,21 @@
   // ------------------------------------------------------------------
   // الشاشة الرئيسية
   // ------------------------------------------------------------------
-  const UNITS = [
-    { from: 30, to: 26, name: "الوحدة الأولى", color: "#58cc02" },
-    { from: 25, to: 21, name: "الوحدة الثانية", color: "#1cb0f6" },
-    { from: 20, to: 16, name: "الوحدة الثالثة", color: "#ce82ff" },
-    { from: 15, to: 11, name: "الوحدة الرابعة", color: "#ff9600" },
-    { from: 10, to: 6,  name: "الوحدة الخامسة", color: "#ff4b4b" },
-    { from: 5,  to: 1,  name: "الوحدة السادسة", color: "#2b70c9" },
-  ];
-  const OFFSETS = [0, 52, 84, 52, 0, -52, -84, -52];
+  const UNIT_COLORS = ["#58cc02", "#1cb0f6", "#ce82ff", "#ff9600", "#ff4b4b", "#2b70c9"];
+  const OFFSETS = [0, 44, 72, 44, 0, -44, -72, -44];
 
   function effectiveStreak() {
     if (state.lastDay === dayKey() || state.lastDay === yesterdayKey()) return state.streak;
     return 0;
   }
-  function todayXP() {
-    return state.daily.day === dayKey() ? state.daily.xp : 0;
-  }
-  function totalStars() {
-    return Object.values(state.progress).reduce((a, p) => a + (p.stars || 0), 0);
-  }
+  const todayXP = () => (state.daily.day === dayKey() ? state.daily.xp : 0);
+  const totalStars = () => Object.values(state.progress).reduce((a, p) => a + Object.values(p.subs || {}).reduce((x, y) => x + y, 0), 0);
+  const doneJuzCount = () => STAGES.filter((s) => juzDone(s.juz)).length;
 
   function renderHome() {
-    const done = Object.keys(state.progress).length;
     $("stat-streak").textContent = toAr(effectiveStreak());
     $("stat-xp").textContent = toAr(state.xp);
-    $("stat-done").textContent = toAr(done);
+    $("stat-done").textContent = toAr(doneJuzCount());
 
     const dx = todayXP();
     $("daily-label").textContent = `${toAr(Math.min(dx, DAILY_GOAL))} / ${toAr(DAILY_GOAL)} نقطة`;
@@ -145,44 +172,49 @@
 
     const path = $("path");
     path.innerHTML = "";
-    const cur = currentJuz();
-    let k = 0;
-    UNITS.forEach((u) => {
-      const b = el("div", "unit-banner");
-      b.style.background = u.color;
-      b.innerHTML = `<div><b>${u.name}</b><small>الأجزاء ${toAr(u.from)} – ${toAr(u.to)}</small></div><span class="unit-num">📜</span>`;
+    const cur = currentSub();
+    let n = 0;
+
+    STAGES.forEach((s) => {
+      const j = s.juz;
+      const color = UNIT_COLORS[Math.floor((30 - j) / 5) % UNIT_COLORS.length];
+      const done = juzSubsDone(j);
+      const locked = !isSubUnlocked(j, 1);
+      const b = el("div", "unit-banner" + (locked ? " locked" : ""));
+      b.style.background = locked ? "" : color;
+      b.innerHTML = `<div class="ub-text"><small>الجزء ${toAr(j)}</small><b>${esc(s.title)}</b><small>${esc(s.surahs)}</small></div>
+        <div class="ub-progress">${juzDone(j) ? "🏆" : locked ? "🔒" : `${toAr(done)}/${toAr(SUB_COUNT)}`}</div>`;
       path.appendChild(b);
-      for (let j = u.from; j >= u.to; j--) {
-        const s = stageByJuz(j);
-        const p = state.progress[j];
-        const unlocked = isUnlocked(j);
+
+      SUBS.forEach((sub) => {
+        const k = sub.k;
+        const unlocked = isSubUnlocked(j, k);
+        const stars = subStars(j, k);
         const wrap = el("div", "node-wrap");
-        wrap.style.transform = `translateX(${OFFSETS[k % OFFSETS.length]}px)`;
-        k++;
-        const btn = el("button", "node");
-        btn.setAttribute("aria-label", `الجزء ${j}`);
-        if (!unlocked) { btn.classList.add("locked"); btn.textContent = "🔒"; }
-        else if (p) { btn.classList.add("done"); btn.textContent = toAr(j); }
-        else { btn.textContent = toAr(j); }
-        if (j === cur) {
+        wrap.style.transform = `translateX(${OFFSETS[n % OFFSETS.length]}px)`;
+        n++;
+        const btn = el("button", "node" + (sub.test ? " test" : ""));
+        btn.setAttribute("aria-label", `الجزء ${j}، المرحلة ${k}: ${sub.short}`);
+        const icon = sub.test ? "🏆" : CATEGORIES[sub.cat].icon;
+        if (!unlocked) { btn.classList.add("locked"); btn.textContent = sub.test ? "🏆" : "🔒"; }
+        else { if (stars) btn.classList.add("done"); btn.textContent = icon; }
+        if (cur && cur.j === j && cur.k === k) {
           btn.classList.add("current");
-          wrap.appendChild(el("div", "start-bubble", "ابدأ"));
+          wrap.appendChild(el("div", "start-bubble", k === 1 ? `ابدأ الجزء ${toAr(j)}` : "ابدأ"));
         }
-        btn.addEventListener("click", () => openStage(j));
+        btn.addEventListener("click", () => openStage(j, k));
         wrap.appendChild(btn);
-        const stars = p ? "⭐".repeat(p.stars) : "";
-        wrap.appendChild(el("div", "node-label", `<div class="node-stars">${stars}</div>الجزء ${toAr(j)}<br>${esc(s.surahs)}`));
+        wrap.appendChild(el("div", "node-label",
+          `<div class="node-stars">${stars ? "⭐".repeat(stars) : ""}</div>${sub.short}`));
         path.appendChild(wrap);
-      }
+      });
     });
 
-    if (cur) {
+    if (!renderHome._scrolled) {
       requestAnimationFrame(() => {
-        const n = path.querySelector(".node.current");
-        if (n && !renderHome._scrolled) {
-          n.scrollIntoView({ block: "center" });
-          renderHome._scrolled = true;
-        }
+        const node = path.querySelector(".node.current");
+        if (node) node.scrollIntoView({ block: "center" });
+        renderHome._scrolled = true;
       });
     }
     renderReview();
@@ -216,7 +248,7 @@
       const s = state.stats[key] || { c: 0, t: 0 };
       const pct = s.t ? Math.round((s.c / s.t) * 100) : 0;
       const row = el("div", "skill-row");
-      row.innerHTML = `<div class="skill-row-head"><span>${cat.icon} ${cat.name}</span><span class="muted">${s.t ? toAr(pct) + "٪ · " + toAr(s.c) + "/" + toAr(s.t) : "لم تبدأ بعد"}</span></div>
+      row.innerHTML = `<div class="skill-row-head"><span>${cat.icon} ${cat.name}</span><span class="muted">${s.t ? toAr(pct) + "٪ — " + toAr(s.c) + "/" + toAr(s.t) : "لم تبدأ بعد"}</span></div>
         <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>`;
       bars.appendChild(row);
     });
@@ -225,24 +257,42 @@
   // ------------------------------------------------------------------
   // نافذة المرحلة
   // ------------------------------------------------------------------
-  let modalJuz = null;
-  function openStage(j) {
-    if (!isUnlocked(j)) {
+  let modalSel = null;
+  function itemsForSub(j, k) {
+    const sub = SUBS[k - 1];
+    const all = juzItems(j);
+    if (!sub.test) return all.filter((it) => it.q.c === sub.cat);
+    // اختبار الجزء: سؤال من كل مهارة ثم أسئلة عشوائية
+    const picked = [];
+    SUBS.filter((s) => !s.test).forEach((s) => {
+      const pool = all.filter((it) => it.q.c === s.cat);
+      if (pool.length) picked.push(pick(pool));
+    });
+    const rest = shuffle(all.filter((it) => !picked.includes(it)));
+    return picked.concat(rest).slice(0, TEST_SIZE);
+  }
+
+  function openStage(j, k) {
+    if (!isSubUnlocked(j, k)) {
       sfx.bad();
-      toast(`أكمل الجزء ${toAr(j + 1)} أولًا لفتح هذه المرحلة 🔒`);
+      toast(k === 1 ? `أكمل اختبار الجزء ${toAr(j + 1)} أولًا لفتح هذا الجزء 🔒` : `أكمل المرحلة ${toAr(k - 1)} أولًا 🔒`);
       return;
     }
     sfx.tap();
-    modalJuz = j;
+    modalSel = { j, k };
     const s = stageByJuz(j);
-    const p = state.progress[j];
-    $("m-badge").textContent = toAr(j);
-    $("m-title").textContent = `${s.title}`;
-    $("m-surahs").textContent = `${s.surahs} · ${toAr(s.questions.length)} أسئلة`;
-    const cats = [...new Set(s.questions.map((q) => q.c))];
-    $("m-cats").innerHTML = cats.map((c) => `<span style="border-color:${CATEGORIES[c].color}">${CATEGORIES[c].icon} ${CATEGORIES[c].name}</span>`).join("");
-    $("m-stars").innerHTML = p ? [1, 2, 3].map((i) => (i <= p.stars ? "⭐" : "<span style='opacity:.25'>⭐</span>")).join("") : "";
-    $("m-start").textContent = p ? "أعِد المرحلة" : "ابدأ المرحلة";
+    const sub = SUBS[k - 1];
+    const stars = subStars(j, k);
+    const count = sub.test ? Math.min(TEST_SIZE, s.questions.length) : s.questions.filter((q) => q.c === sub.cat).length;
+    const badge = $("m-badge");
+    badge.textContent = sub.test ? "🏆" : CATEGORIES[sub.cat].icon;
+    badge.style.background = sub.test ? "var(--gold)" : CATEGORIES[sub.cat].color;
+    $("m-title").textContent = `${sub.test ? "اختبار الجزء" : CATEGORIES[sub.cat].name}`;
+    $("m-surahs").textContent = `الجزء ${toAr(j)} — المرحلة ${toAr(k)} من ${toAr(SUB_COUNT)} — ${toAr(count)} أسئلة`;
+    $("m-cats").innerHTML = `<span>${esc(s.title)}</span><span>${esc(s.surahs)}</span>` +
+      (sub.test ? `<span style="border-color:var(--gold)">أسئلة منوّعة من المهارات الست</span>` : "");
+    $("m-stars").innerHTML = stars ? [1, 2, 3].map((i) => (i <= stars ? "⭐" : "<span style='opacity:.25'>⭐</span>")).join("") : "";
+    $("m-start").textContent = stars ? "أعِد المرحلة" : sub.test ? "ابدأ الاختبار" : "ابدأ المرحلة";
     $("modal-stage").classList.add("open");
   }
   function closeModal() { $("modal-stage").classList.remove("open"); }
@@ -271,7 +321,7 @@
     if (!items.length) { toast("لا توجد أسئلة متاحة بعد"); return; }
     L = {
       mode, meta,
-      queue: shuffle(items),
+      queue: mode === "stage" && meta.k === SUB_COUNT ? shuffle(items) : shuffle(items),
       total: items.length,
       done: 0,
       hearts: MAX_HEARTS,
@@ -280,7 +330,6 @@
       seen: new Set(),
       cur: null,
       answered: false,
-      lastCorrect: false,
       selection: null,
       matchFailed: false,
     };
@@ -288,10 +337,7 @@
     nextQuestion();
   }
 
-  function startStage(j) {
-    const s = stageByJuz(j);
-    startLesson("stage", s.questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q })), { juz: j });
-  }
+  const startStage = (j, k) => startLesson("stage", itemsForSub(j, k), { juz: j, k });
   function startReview() {
     const items = state.mistakes.map(qById).filter(Boolean);
     startLesson("review", shuffle(items).slice(0, 10));
@@ -299,7 +345,7 @@
   function startSkill(cat) {
     const items = [];
     STAGES.forEach((s) => {
-      if (!isUnlocked(s.juz)) return;
+      if (!isSubUnlocked(s.juz, 1)) return;
       s.questions.forEach((q, i) => { if (q.c === cat) items.push({ id: `${s.juz}:${i}`, juz: s.juz, q }); });
     });
     if (!items.length) { toast("افتح مراحل أكثر لتتدرّب على هذه المهارة"); return; }
@@ -324,8 +370,8 @@
     const cat = CATEGORIES[q.c];
     const chip = $("q-chip");
     chip.style.background = cat.color;
-    chip.textContent = `${cat.icon} ${cat.name}${L.mode !== "stage" ? " · الجزء " + toAr(juz) : ""}`;
-    $("q-text").textContent = q.q;
+    chip.textContent = `${cat.icon} ${cat.name}${L.mode !== "stage" ? " — الجزء " + toAr(juz) : ""}`;
+    $("q-text").textContent = q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q;
     $("q-ayah").innerHTML = q.a ? `<div class="ayah-text">﴿${esc(q.a)}﴾</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
 
     const footer = $("lesson-footer");
@@ -342,11 +388,23 @@
     $("screen-lesson").querySelector(".lesson-main").scrollTop = 0;
   }
 
-  // ---------- اختيار من متعدد ----------
+  // ---------- اختيار من متعدد / صح وخطأ ----------
   const KEYS = ["أ", "ب", "ج", "د", "هـ"];
+  const FIXED_PAIRS = [["مكية", "مدنية"], ["صحيح", "خطأ"]];
+
+  function buildOptions(q) {
+    if (q.t === "tf") return [{ text: "صحيح", correct: q.v === true }, { text: "خطأ", correct: q.v === false }];
+    const opts = q.o.map((text, i) => ({ text, correct: i === 0 }));
+    if (opts.length === 2) {
+      // ترتيب ثابت للخيارين المتقابلين حتى لا يكون الصحيح في المكان نفسه دائمًا
+      const pair = FIXED_PAIRS.find((p) => p.includes(opts[0].text) && p.includes(opts[1].text));
+      if (pair) return pair.map((t) => opts.find((o) => o.text === t));
+    }
+    return shuffle(opts);
+  }
+
   function renderMCQ(q, body) {
-    const opts = q.o.length === 2 ? q.o.map((text, i) => ({ text, correct: i === 0 }))
-                                  : shuffle(q.o.map((text, i) => ({ text, correct: i === 0 })));
+    const opts = buildOptions(q);
     L.opts = opts;
     const wrap = el("div", "options" + (opts.length === 2 ? " two" : ""));
     opts.forEach((o, i) => {
@@ -366,8 +424,7 @@
   function checkMCQ() {
     const correctIdx = L.opts.findIndex((o) => o.correct);
     const ok = L.selection === correctIdx;
-    const btns = document.querySelectorAll(".opt");
-    btns.forEach((b, k) => {
+    document.querySelectorAll(".opt").forEach((b, k) => {
       b.disabled = true;
       b.classList.remove("selected");
       if (k === correctIdx) b.classList.add("correct");
@@ -426,7 +483,6 @@
   // ---------- تقييم الإجابة ----------
   function resolve(ok, correctText) {
     L.answered = true;
-    L.lastCorrect = ok;
     L.attempts++;
     const { q, id } = L.cur;
     const st = state.stats[q.c] || (state.stats[q.c] = { c: 0, t: 0 });
@@ -463,27 +519,26 @@
     btn.textContent = ok ? "متابعة" : (L.hearts > 0 ? "فهمت، متابعة" : "متابعة");
     btn.focus({ preventScroll: true });
   }
-  const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
   function onCheck() {
     if (!L) return;
     if (L.answered) return nextQuestion();
-    if (L.cur.q.t === "mcq" && L.selection != null) checkMCQ();
+    if (L.cur.q.t !== "match" && L.selection != null) checkMCQ();
   }
 
   // ---------- إنهاء الدرس ----------
   function finishLesson(passed) {
     const acc = L.attempts ? Math.round(((L.attempts - L.mistakes) / L.attempts) * 100) : 0;
     let xp = 0, stars = 0;
+    const { juz: j, k } = L.meta;
+    let firstClear = false;
     if (passed) {
       stars = L.mistakes === 0 ? 3 : L.mistakes <= 2 ? 2 : 1;
-      xp = L.mode === "stage" ? L.total * 2 + stars * 5 : L.total * 2;
+      xp = L.mode === "stage" ? L.total * 2 + stars * 2 + (k === SUB_COUNT ? 10 : 0) : L.total * 2;
       if (L.mode === "stage") {
-        const j = L.meta.juz;
-        const prev = state.progress[j];
-        const wasNew = !prev;
-        state.progress[j] = { stars: Math.max(stars, prev ? prev.stars : 0), best: Math.max(acc, prev ? prev.best : 0) };
-        L.meta.unlockedNext = wasNew && j > 1;
+        const p = state.progress[j] || (state.progress[j] = { subs: {} });
+        firstClear = !p.subs[k];
+        p.subs[k] = Math.max(stars, p.subs[k] || 0);
       }
     } else {
       xp = L.done; // نقاط بسيطة على المحاولة
@@ -500,15 +555,18 @@
     }
     save();
 
-    $("r-emoji").textContent = passed ? (stars === 3 ? "🏆" : "🎉") : "💔";
-    $("r-title").textContent = passed ? (stars === 3 ? "إتقان تام!" : "أحسنت!") : "نفدت القلوب";
+    const isTest = L.mode === "stage" && k === SUB_COUNT;
+    $("r-emoji").textContent = !passed ? "💔" : isTest ? "🏆" : stars === 3 ? "🌟" : "🎉";
+    $("r-title").textContent = !passed ? "نفدت القلوب" : isTest ? "أتممت الجزء!" : stars === 3 ? "إتقان تام!" : "أحسنت!";
     let sub = "";
     if (!passed) sub = "لا بأس، المراجعة طريق الإتقان. حاول مرة أخرى!";
     else if (L.mode === "stage") {
-      const j = L.meta.juz;
-      sub = j === 1 && L.meta.unlockedNext !== undefined
-        ? "أتممت المراحل كلها — ختمتَ رحلة الثلاثين جزءًا! 🌙"
-        : L.meta.unlockedNext ? `أتممت الجزء ${toAr(j)} وفُتح لك الجزء ${toAr(j - 1)}` : `أتممت الجزء ${toAr(j)}`;
+      if (isTest) {
+        sub = j === 1 ? "ختمتَ رحلة الثلاثين جزءًا كاملة! 🌙"
+          : firstClear ? `أتممت الجزء ${toAr(j)} بمراحله السبع، وفُتح لك الجزء ${toAr(j - 1)}` : `أتممت اختبار الجزء ${toAr(j)}`;
+      } else {
+        sub = `أتممت المرحلة ${toAr(k)} من ${toAr(SUB_COUNT)} في الجزء ${toAr(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
+      }
     } else sub = L.mode === "review" ? "أتممت جلسة المراجعة" : "أتممت جلسة التدريب";
     $("r-sub").textContent = sub;
     $("r-stars").innerHTML = passed && L.mode === "stage" ? [1, 2, 3].map((i) => (i <= stars ? "⭐" : "<span class='off'>⭐</span>")).join("") : "";
@@ -538,7 +596,7 @@
         if (b.dataset.tab === "tab-path") { renderHome._scrolled = false; renderHome(); }
       })
     );
-    $("m-start").addEventListener("click", () => { closeModal(); startStage(modalJuz); });
+    $("m-start").addEventListener("click", () => { closeModal(); startStage(modalSel.j, modalSel.k); });
     $("m-close").addEventListener("click", closeModal);
     $("modal-stage").addEventListener("click", (e) => { if (e.target.id === "modal-stage") closeModal(); });
     $("btn-check").addEventListener("click", onCheck);
@@ -550,7 +608,7 @@
     $("btn-continue").addEventListener("click", () => { L = null; show("screen-home"); });
     $("btn-retry").addEventListener("click", () => {
       const { mode, meta } = L;
-      if (mode === "stage") startStage(meta.juz);
+      if (mode === "stage") startStage(meta.juz, meta.k);
       else if (mode === "skill") startSkill(meta.cat);
       else startReview();
     });
@@ -559,6 +617,7 @@
       if (!(await ask("إعادة ضبط التقدّم؟", "سيُحذف كل تقدّمك ونقاطك ونجومك.", "احذف التقدّم"))) return;
       state = defaultState();
       save();
+      renderHome._scrolled = false;
       renderHome();
       toast("تمت إعادة الضبط");
     });
@@ -567,7 +626,7 @@
       if (!$("screen-lesson").classList.contains("active") || !L) return;
       if (e.key === "Enter") { e.preventDefault(); if (!$("btn-check").disabled) onCheck(); return; }
       const n = parseInt(e.key, 10);
-      if (n >= 1 && n <= 4 && L.cur && L.cur.q.t === "mcq" && L.opts && n <= L.opts.length) selectOpt(n - 1);
+      if (n >= 1 && n <= 4 && L.cur && L.cur.q.t !== "match" && L.opts && n <= L.opts.length) selectOpt(n - 1);
     });
   }
 
