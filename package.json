@@ -8,7 +8,7 @@
     "sync": "npm run build && npx cap sync",
     "android": "npm run sync && npx cap open android",
     "ios": "npm run sync && npx cap open ios",
-    "review": "node scripts/export-review.mjs && python3 scripts/build-review.py"
+    "review": "node scripts/export-review.mjs && python3 scripts/build-review.py && python3 scripts/build-by-category.py"
   },
   "dependencies": {
     "@capacitor/core": "^6.2.3",
