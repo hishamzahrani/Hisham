@@ -1,0 +1,8 @@
+{
+  "appId": "ae.quranquest.app",
+  "appName": "مسابقات قرآنية",
+  "webDir": "www",
+  "backgroundColor": "#ffffff",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "never" }
+}

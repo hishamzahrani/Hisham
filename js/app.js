@@ -36,6 +36,7 @@
     units: {},             // { [u]: stars }
     stats: {},             // { [cat]: { c, t } }
     mistakes: [],          // ["juz:index", ...]
+    lastPos: {},           // موضع الجواب الصحيح في آخر عرض لكل سؤال
     sound: true,
     premium: null,         // { plan, token, until } — يُعتمد عليه فقط بعد تحقق الخادم
   });
@@ -134,6 +135,36 @@
   const M = typeof MONETIZATION !== "undefined" ? MONETIZATION : { enabled: false };
   const isPremium = () => !M.enabled || !!(state.premium && state.premium.until > Date.now());
   const isPremiumUnit = (u) => M.enabled && u >= M.freeUnits;
+  const NP = window.NativePurchases && window.NativePurchases.isNative ? window.NativePurchases : null;
+  let storePackages = {};   // planId -> RevenueCat package (في التطبيق فقط)
+
+  /** تحويل حالة RevenueCat إلى اشتراك محلي */
+  function applyCustomerInfo(ci) {
+    const ent = ci && ci.entitlements && ci.entitlements.active && ci.entitlements.active[M.store.entitlement];
+    if (ent) {
+      state.premium = { plan: ent.productIdentifier, until: ent.expirationDateMillis || Date.now() + 3650 * 864e5, source: "store" };
+    } else if (state.premium && state.premium.source === "store") {
+      state.premium = null;
+    }
+    save();
+  }
+  async function initStore() {
+    if (!NP || !M.enabled) return;
+    const key = M.store.revenuecatApiKeys[NP.platform];
+    if (!key) return;
+    try {
+      await NP.configure(key);
+      applyCustomerInfo(await NP.customerInfo());
+      NP.onChange((ci) => { applyCustomerInfo(ci); renderHome(); if ($("screen-plus").classList.contains("active")) renderPlus(); });
+      const pkgs = await NP.packages();
+      const ids = M.store.products;
+      Object.keys(ids).forEach((plan) => {
+        const pk = pkgs.find((x) => x.product && x.product.identifier && x.product.identifier.startsWith(ids[plan]));
+        if (pk) storePackages[plan] = pk;
+      });
+      renderHome();
+    } catch (_) { /* المتجر غير متاح الآن؛ يبقى التطبيق يعمل بالوحدة المجانية */ }
+  }
   const premiumLocked = (j) => isPremiumUnit(unitOf(j)) && !isPremium();
 
   function isSubUnlocked(j, k) {
@@ -424,10 +455,14 @@
     const box = $("plus-plans");
     box.innerHTML = "";
     if (!selectedPlan) selectedPlan = (M.plans.find((p) => p.best) || M.plans[0]).id;
-    M.plans.forEach((p) => {
+    const plans = M.plans.filter((p) => !(NP && p.webOnly));
+    box.classList.toggle("two", plans.length === 2);
+    plans.forEach((p) => {
+      const pk = storePackages[p.id];
+      const priceHtml = pk ? esc(pk.product.priceString) : `${money(p.price)} <small>${esc(M.currency)}</small>`;
       const b = el("button", "plan" + (p.id === selectedPlan ? " sel" : "") + (p.best ? " best" : ""),
         `${p.best ? '<span class="plan-flag">الأوفر</span>' : ""}<b>${esc(p.name)}</b>
-         <span class="plan-price">${money(p.price)} <small>${esc(M.currency)}</small></span>
+         <span class="plan-price">${priceHtml}</span>
          <small class="muted">${esc(p.period)}</small><small class="plan-note">${esc(p.note || "")}</small>`);
       b.addEventListener("click", () => { selectedPlan = p.id; sfx.tap(); renderPlus(); });
       box.appendChild(b);
@@ -438,6 +473,12 @@
       : "";
     $("plus-cta").textContent = active ? "اشتراكك فعّال ✓" : "اشترك الآن";
     $("plus-cta").disabled = !!active;
+    $("plus-code-box").hidden = !!NP;
+    $("plus-restore").hidden = !NP;
+    $("plus-legal").innerHTML = (NP
+      ? "يتجدد الاشتراك تلقائيًا ويُخصم من حسابك في المتجر ما لم تُلغِه قبل ٢٤ ساعة على الأقل من نهاية الفترة، ويمكنك إدارته أو إلغاؤه من إعدادات حسابك في المتجر. "
+      : "يمكنك إلغاء الاشتراك في أي وقت. ") +
+      `<a href="${esc(M.privacyUrl)}" target="_blank" rel="noopener">سياسة الخصوصية</a> · <a href="${esc(M.termsUrl)}" target="_blank" rel="noopener">شروط الاستخدام</a>`;
     const sc = $("plus-scholar");
     sc.hidden = !M.scholarshipContact;
     if (M.scholarshipContact) sc.querySelector("b").textContent = M.scholarshipContact;
@@ -447,10 +488,31 @@
     renderPlus();
     show("screen-plus");
   }
-  function subscribe() {
+  async function subscribe() {
+    if (NP) {
+      const pk = storePackages[selectedPlan];
+      if (!pk) { toast("الاشتراك غير متاح حاليًا، حاول لاحقًا"); return; }
+      const btn = $("plus-cta"); btn.disabled = true;
+      const r = await NP.purchase(pk);
+      btn.disabled = false;
+      if (r.customerInfo) {
+        applyCustomerInfo(r.customerInfo);
+        if (isPremium()) { sfx.win(); toast("تم الاشتراك، بارك الله لك"); }
+      } else if (!r.cancelled) toast("تعذّر إتمام الشراء: " + r.error);
+      renderPlus();
+      return;
+    }
     const url = M.checkoutLinks && M.checkoutLinks[selectedPlan];
     if (!url) { toast("الدفع الإلكتروني يُفعَّل قريبًا إن شاء الله"); return; }
     window.open(url, "_blank", "noopener");
+  }
+  async function restore() {
+    if (!NP) return;
+    try {
+      applyCustomerInfo(await NP.restore());
+      toast(isPremium() ? "تمت استعادة اشتراكك" : "لم نجد اشتراكًا سابقًا لهذا الحساب");
+      renderPlus(); renderHome();
+    } catch (_) { toast("تعذّرت الاستعادة، حاول لاحقًا"); }
   }
   async function activate() {
     const code = $("plus-code").value.trim();
@@ -562,20 +624,37 @@
 
   // ---------- اختيار من متعدد / صح وخطأ ----------
   const KEYS = ["أ", "ب", "ج", "د", "هـ"];
-  const FIXED_PAIRS = [["مكية", "مدنية"], ["صحيح", "خطأ"]];
+  // آخر ترتيب عُرض به كل سؤال، حتى يتغيّر موضع الخيارات عند تكراره
+  const lastLayout = {};
 
-  function buildOptions(q) {
-    if (q.t === "tf") return [{ text: "صحيح", correct: q.v === true }, { text: "خطأ", correct: q.v === false }];
-    const opts = q.o.map((text, i) => ({ text, correct: i === 0 }));
-    if (opts.length === 2) {
-      const pair = FIXED_PAIRS.find((p) => p.includes(opts[0].text) && p.includes(opts[1].text));
-      if (pair) return pair.map((t) => opts.find((o) => o.text === t));
+  /** خلط يضمن أن يختلف الترتيب عن المرة السابقة، وأن ينتقل الجواب الصحيح إلى موضع آخر */
+  function arrangeDifferent(key, items, isCorrect) {
+    const prev = lastLayout[key] || (state.lastPos && state.lastPos[key] != null ? { pos: state.lastPos[key] } : null);
+    let out = shuffle(items);
+    if (prev && items.length > 1) {
+      for (let t = 0; t < 30; t++) {
+        const pos = isCorrect ? out.findIndex(isCorrect) : -1;
+        const sameOrder = prev.order && out.every((o, i) => o.text === prev.order[i]);
+        const samePos = isCorrect && pos === prev.pos;
+        if (!sameOrder && !samePos) break;
+        out = shuffle(items);
+      }
     }
-    return shuffle(opts);
+    const pos = isCorrect ? out.findIndex(isCorrect) : -1;
+    lastLayout[key] = { order: out.map((o) => o.text), pos };
+    if (isCorrect) { state.lastPos = state.lastPos || {}; state.lastPos[key] = pos; }
+    return out;
+  }
+
+  function buildOptions(q, id) {
+    const opts = q.t === "tf"
+      ? [{ text: "صحيح", correct: q.v === true }, { text: "خطأ", correct: q.v === false }]
+      : q.o.map((text, i) => ({ text, correct: i === 0 }));
+    return arrangeDifferent(id, opts, (o) => o.correct);
   }
 
   function renderMCQ(q, body) {
-    const opts = buildOptions(q);
+    const opts = buildOptions(q, L.cur.id);
     L.opts = opts;
     const wrap = el("div", "options" + (opts.length === 2 ? " two" : ""));
     opts.forEach((o, i) => {
@@ -607,8 +686,8 @@
   // ---------- المطابقة ----------
   function renderMatch(q, body) {
     $("btn-check").style.display = "none";
-    const words = shuffle(q.p.map((p, i) => ({ text: p[0], i })));
-    const means = shuffle(q.p.map((p, i) => ({ text: p[1], i })));
+    const words = arrangeDifferent(L.cur.id + ":w", q.p.map((p, i) => ({ text: p[0], i })));
+    const means = arrangeDifferent(L.cur.id + ":m", q.p.map((p, i) => ({ text: p[1], i })));
     const grid = el("div", "match");
     const colW = el("div", "match-col");
     const colM = el("div", "match-col");
@@ -803,6 +882,7 @@
     $("plus-close").addEventListener("click", () => show("screen-home"));
     $("plus-cta").addEventListener("click", subscribe);
     $("plus-activate").addEventListener("click", activate);
+    $("plus-restore").addEventListener("click", restore);
     $("btn-reset").addEventListener("click", async () => {
       if (!(await ask("إعادة ضبط التقدّم؟", "سيُحذف كل تقدّمك ونقاطك ونجومك.", "احذف التقدّم"))) return;
       state = defaultState();
@@ -825,8 +905,9 @@
   // ------------------------------------------------------------------
   bind();
   renderHome();
+  initStore();
 
-  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  if (!NP && "serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("sw.js").catch(() => {});
     });
