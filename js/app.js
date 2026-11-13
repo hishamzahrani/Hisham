@@ -81,7 +81,8 @@
     }
     return a;
   };
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
+    .replace(/[\uFD3E\uFD3F]/g, '<span class="orn">$&</span>'); // أقواس الآيات بخط المصحف
   const toAr = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
   const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
@@ -652,8 +653,8 @@
     const chip = $("q-chip");
     chip.style.background = cat.color;
     chip.innerHTML = `${ic(cat.icon)}<span>${cat.name}${L.mode !== "stage" ? " — الجزء " + toAr(juz) : ""}</span>`;
-    $("q-text").textContent = q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q;
-    $("q-ayah").innerHTML = q.a ? `<div class="ayah-text">﴿${esc(q.a)}﴾</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
+    $("q-text").innerHTML = esc(q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q);
+    $("q-ayah").innerHTML = q.a ? `<div class="ayah-text">﴾${esc(q.a)}﴿</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
 
     const footer = $("lesson-footer");
     footer.classList.remove("ok", "bad");
@@ -809,7 +810,7 @@
     $("fb-icon").innerHTML = ic(ok ? "check" : "close");
     $("fb-title").textContent = ok ? pick(["أحسنت!", "ممتاز!", "بارك الله فيك!", "إجابة صحيحة!"]) : "الإجابة الصحيحة:";
     $("fb-answer").textContent = !ok && correctText ? correctText : "";
-    $("fb-explain").textContent = q.e || "";
+    $("fb-explain").innerHTML = esc(q.e || "");
     const src = sourceOf(q);
     $("fb-source").innerHTML = `${ic("sources")} <b>${esc(src.label)}:</b> ${esc(src.text)}` +
       (q.verified ? ` <span class="verified">${ic("seal")}موثّق من المكتبة الشاملة</span>` : "");

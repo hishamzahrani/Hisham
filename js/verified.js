@@ -55,7 +55,7 @@ function normAr(s) {
   return String(s || "")
     .replace(/[ً-ٰٟـ]/g, "")
     .replace(/[أإآٱ]/g, "ا").replace(/[ؤ]/g, "و").replace(/[ئ]/g, "ي").replace(/ء/g, "")
-    .replace(/[«»﴿﴾]/g, "");
+    .replace(/[«»﴾﴿]/g, "");
 }
 
 const VERIFY_REPORT = VERIFIED.map(([juz, c, needle, cite]) => {
