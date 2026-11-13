@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const KEY = "dad-app-v2";
+  const KEY = "dad-app-v3";
   const HEARTS_MAX = 5, REFILL_MS = 16 * 3600e3, DAILY_GOAL = 30, PER_STAGE = 6;
   const $ = id => document.getElementById(id);
   const $view = $("view");
@@ -40,6 +40,8 @@
     return { k, ...sch, topics, pool, stages };
   });
   const sciOf = qid => bySci(qid.split(".")[0]);
+  const lessonOf = qid => { const [s, l] = qid.split("."); return bySci(s).lessons[+l]; };
+  const srcHtml = src => src ? `<div class="src">📚 المصدر: <a href="${src.url}" target="_blank" rel="noopener">«${src.book}» لـ${src.author}، ${/^[٠-٩]+\//.test(src.page) ? "" : "ص "}${src.page}</a> <span class="muted">(المكتبة الشاملة)</span></div>` : "";
   const topicsOf = qids => [...new Set(qids.map(id => id.split(".").slice(0, 2).join(".")))].map(t => { const [sid, li] = t.split("."); return { sid, li: +li }; });
 
   /* ---------- الحالة ---------- */
@@ -318,7 +320,7 @@
       ${topicsOf(qids).map(t => {
         const s = bySci(t.sid), l = s.lessons[t.li];
         return `<details class="note" style="--c:${s.color}"><summary><span class="chip" style="--c:${s.color}">${s.name}</span> ${l.title}</summary>
-          ${l.notes.map(n => `<p>${n}</p>`).join("")}</details>`;
+          ${l.notes.map(n => `<p>${n}</p>`).join("")}${srcHtml(l.src)}</details>`;
       }).join("")}`;
   }
 
@@ -401,7 +403,7 @@
         <div class="bar" style="--c:${Q.color}"><i style="width:${100 * Q.i / Q.items.length}%"></i></div>
         ${Q.useHearts ? `<span class="q-hearts">❤️ ${AR(S.hearts)}</span>` : `<span class="small muted">${AR(Q.i + 1)} من ${AR(Q.items.length)}</span>`}
       </div>
-      <div class="q-meta"><span class="chip" style="--c:${s.color}">${s.name}</span><span class="muted small">${lesson.title}</span>
+      <div class="q-meta"><span class="chip" style="--c:${s.color}">${s.name}</span><span class="muted small">${lesson.title}</span>${lesson.src ? `<span class="muted small" title="من المكتبة الشاملة">· 📚 ${lesson.src.book}</span>` : ""}
         ${MODE_TITLE[Q.mode] ? `<span class="muted small">· ${MODE_TITLE[Q.mode]}</span>` : ""}</div>
       <div class="q-kind">${KIND[q.t]}</div>
       <div class="q-text">${esc(q.q)}</div>
@@ -431,6 +433,7 @@
       <h3>${ok ? "أحسنت! ✓" : "ليست الإجابة الصحيحة"}</h3>
       ${!ok && correctText ? `<p><b>الصواب:</b> ${esc(correctText)}</p>` : ""}
       <p>${esc(q.e || "")}</p>
+      ${srcHtml(lessonOf(it.id).src)}
       <button class="btn btn-block ${ok ? "btn-ok" : "btn-bad"}" data-act="next">متابعة</button></div>`;
     $view.appendChild(fb);
   }
@@ -450,7 +453,9 @@
       el.classList.add("picked"); Q.sel = { i, el }; return;
     }
     if (!Q.sel) return toast("اختر من العمود الأيمن أولًا");
-    if (+Q.sel.i === +i) {
+    // تُقارن المعاني بالنص، فإذا تكرر معنى في العمود الأيسر صحّ أي منهما
+    const pairs = Q.items[Q.i].q.pairs;
+    if (pairs[+Q.sel.i][1] === pairs[+i][1]) {
       Q.sel.el.classList.remove("picked"); Q.sel.el.classList.add("matched"); el.classList.add("matched");
       Q.sel = null; Q.left--;
       if (!Q.left) answer(!Q.matchErr, null);
