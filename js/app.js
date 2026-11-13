@@ -111,14 +111,19 @@
     const w = String(a).trim().replace(/\s+(\u06DD)/g, "\u00A0$1").split(/[ \t\n]+/);
     // القوس داخل عزلٍ يسار-يمين: لا يعكس أي محرّك رسمَه، ويبقى موضعه تابعًا للسياق العربي حوله
     // يُكتب القوس الأيمن بالرمز U+FD3F والأيسر بـ U+FD3E لأن رسمهما الخام (دون عكس) هو المطابق للمصحف
-    const O = '<span class="orn" dir="ltr">\uFD3F</span>', C = '<span class="orn" dir="ltr">\uFD3E</span>';
+    const O = ORN_OPEN, C = ORN_CLOSE;
     const glue = (h) => `<span class="ayah-edge" dir="rtl">${h}</span>`;
     if (w.length === 1) return glue(O + esc(w[0]) + C);
     const first = w.shift(), last = w.pop();
     return [glue(O + esc(first)), ...w.map(esc), glue(esc(last) + C)].join(" ");
   }
+  // أقواس المصحف المزخرفة تُرسم صورةً (SVG) لا حرفًا، لأن Safari وChrome يرسمان الحرفين U+FD3E/U+FD3F
+  // متعاكسين؛ الرسم ثابت في كل المتصفحات: طرفا القوس نحو الآية والزخرفة خارجها
+  const ORN_SVG = '<svg class="orn" viewBox="0 0 18 40" aria-hidden="true" fill="currentColor"><path d="M2 1C9 7 11.2 13.2 11.2 20S9 33 2 39C5.6 32.6 6.6 26.4 6.6 20S5.6 7.4 2 1z"/><path fill-rule="evenodd" d="M14.6 14.2l2.7 5.8-2.7 5.8-2.7-5.8zM14.6 18.2l.85 1.8-.85 1.8-.85-1.8z"/><circle cx="10.3" cy="10.5" r="1.1"/><circle cx="10.3" cy="29.5" r="1.1"/></svg>';
+  const ORN_OPEN = ORN_SVG.replace('class="orn"', 'class="orn orn-open"');
+  const ORN_CLOSE = ORN_SVG.replace('class="orn"', 'class="orn orn-close"');
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
-    .replace(/[\uFD3E\uFD3F]/g, (c) => `<span class="orn" dir="ltr">${c === "\uFD3E" ? "\uFD3F" : "\uFD3E"}</span>`); // أقواس الآيات بخط المصحف
+    .replace(/[\uFD3E\uFD3F]/g, (c) => (c === "\uFD3E" ? ORN_OPEN : ORN_CLOSE)); // أقواس الآيات بخط المصحف
   const toAr = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
   const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
