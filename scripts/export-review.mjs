@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import vm from "node:vm";
 
-const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/balance.js"];
+const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/balance.js"];
 const code = files.map((f) => readFileSync(f, "utf8")).join("\n") +
   "\n;this.__out = { STAGES, CATEGORIES, sourceOf };";
 const ctx = {};
