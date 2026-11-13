@@ -1,0 +1,15 @@
+{
+  "name": "مسابقات قرآنية",
+  "short_name": "مسابقات قرآنية",
+  "description": "تعلّم معاني القرآن الكريم: 30 مرحلة من الجزء الثلاثين إلى الأول",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#58cc02",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>مسابقات قرآنية</title>
+  <meta name="description" content="تعلّم معاني القرآن الكريم خطوة بخطوة: 30 مرحلة من الجزء الثلاثين إلى الأول.">
+  <meta name="theme-color" content="#58cc02">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ الشاشة الرئيسية ============ -->
+    <section id="screen-home" class="screen active">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">﴿</span><span>مسابقات قرآنية</span><span class="brand-mark">﴾</span>
+        </div>
+        <div class="stats-row">
+          <span class="stat" title="أيام متتالية"><span class="stat-ico">🔥</span><b id="stat-streak">0</b></span>
+          <span class="stat" title="نقاط الخبرة"><span class="stat-ico">⭐</span><b id="stat-xp">0</b></span>
+          <span class="stat" title="المراحل المكتملة"><span class="stat-ico">🏆</span><b id="stat-done">0</b>/٣٠</span>
+        </div>
+      </header>
+
+      <main class="home-main">
+        <div id="tab-path" class="tab active">
+          <div class="daily">
+            <div class="daily-text">
+              <b>هدف اليوم</b>
+              <span id="daily-label">0 / 30 نقطة</span>
+            </div>
+            <div class="bar"><div class="bar-fill" id="daily-fill"></div></div>
+          </div>
+          <div id="path" class="path" aria-label="مسار المراحل"></div>
+        </div>
+
+        <div id="tab-review" class="tab">
+          <div class="panel">
+            <h2>مراجعة الأخطاء</h2>
+            <p class="muted">الأسئلة التي أخطأت فيها تُحفظ هنا لتراجعها حتى تُتقنها.</p>
+            <div class="big-number" id="mistakes-count">0</div>
+            <p class="muted center">سؤالًا بانتظار المراجعة</p>
+            <button class="btn btn-primary btn-block" id="btn-review">ابدأ المراجعة</button>
+          </div>
+          <div class="panel">
+            <h2>تدريب حسب المهارة</h2>
+            <p class="muted">اختر مهارة لتتدرّب على أسئلتها من المراحل التي فتحتها.</p>
+            <div id="skill-buttons" class="skill-grid"></div>
+          </div>
+        </div>
+
+        <div id="tab-stats" class="tab">
+          <div class="panel">
+            <h2>إحصائياتك</h2>
+            <div class="kpis">
+              <div class="kpi"><span>🔥</span><b id="k-streak">0</b><small>أيام متتالية</small></div>
+              <div class="kpi"><span>⭐</span><b id="k-xp">0</b><small>نقطة خبرة</small></div>
+              <div class="kpi"><span>👑</span><b id="k-stars">0</b><small>نجمة من 90</small></div>
+              <div class="kpi"><span>🎯</span><b id="k-acc">0%</b><small>دقة الإجابات</small></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>إتقان المهارات</h2>
+            <div id="skill-bars"></div>
+          </div>
+          <div class="panel">
+            <button class="btn btn-ghost btn-block" id="btn-reset">إعادة ضبط التقدّم</button>
+          </div>
+        </div>
+      </main>
+
+      <nav class="bottom-nav">
+        <button class="nav-btn active" data-tab="tab-path"><span>🗺️</span>المسار</button>
+        <button class="nav-btn" data-tab="tab-review"><span>🔁</span>المراجعة</button>
+        <button class="nav-btn" data-tab="tab-stats"><span>📊</span>الإحصائيات</button>
+      </nav>
+    </section>
+
+    <!-- ============ شاشة الدرس ============ -->
+    <section id="screen-lesson" class="screen">
+      <header class="lesson-top">
+        <button class="icon-btn" id="btn-quit" aria-label="إغلاق">✕</button>
+        <div class="bar lesson-bar"><div class="bar-fill" id="lesson-fill"></div></div>
+        <div class="hearts"><span>❤️</span><b id="hearts">5</b></div>
+      </header>
+
+      <main class="lesson-main">
+        <div id="q-chip" class="chip"></div>
+        <h2 id="q-text" class="q-text"></h2>
+        <div id="q-ayah" class="ayah"></div>
+        <div id="q-body"></div>
+      </main>
+
+      <footer id="lesson-footer" class="lesson-footer">
+        <div class="feedback" id="feedback">
+          <div class="fb-head"><span id="fb-icon"></span><b id="fb-title"></b></div>
+          <div class="fb-answer" id="fb-answer"></div>
+          <p class="fb-explain" id="fb-explain"></p>
+        </div>
+        <button class="btn btn-primary btn-block" id="btn-check" disabled>تحقّق</button>
+      </footer>
+    </section>
+
+    <!-- ============ شاشة النتيجة ============ -->
+    <section id="screen-result" class="screen">
+      <main class="result-main">
+        <div class="result-emoji" id="r-emoji">🎉</div>
+        <h1 id="r-title">أحسنت!</h1>
+        <p class="muted" id="r-sub"></p>
+        <div class="r-stars" id="r-stars"></div>
+        <div class="r-cards">
+          <div class="r-card xp"><small>نقاط</small><b id="r-xp">0</b></div>
+          <div class="r-card acc"><small>الدقة</small><b id="r-acc">0%</b></div>
+        </div>
+      </main>
+      <footer class="lesson-footer">
+        <button class="btn btn-primary btn-block" id="btn-continue">متابعة</button>
+        <button class="btn btn-ghost btn-block" id="btn-retry">إعادة المحاولة</button>
+      </footer>
+    </section>
+
+    <!-- ============ نافذة المرحلة ============ -->
+    <div class="modal" id="modal-stage" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="m-badge" id="m-badge">30</div>
+        <h2 id="m-title"></h2>
+        <p class="muted" id="m-surahs"></p>
+        <div class="m-cats" id="m-cats"></div>
+        <div class="m-stars" id="m-stars"></div>
+        <button class="btn btn-primary btn-block" id="m-start">ابدأ المرحلة</button>
+        <button class="btn btn-ghost btn-block" id="m-close">لاحقًا</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
