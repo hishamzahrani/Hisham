@@ -247,6 +247,21 @@
   }
   function closeModal() { $("modal-stage").classList.remove("open"); }
 
+  // نافذة تأكيد داخل الصفحة (بديل confirm)
+  function ask(text, sub, okLabel) {
+    return new Promise((res) => {
+      $("c-text").textContent = text;
+      $("c-sub").textContent = sub || "";
+      $("c-ok").textContent = okLabel || "نعم";
+      const m = $("modal-confirm");
+      m.classList.add("open");
+      const done = (v) => { m.classList.remove("open"); $("c-ok").onclick = $("c-cancel").onclick = m.onclick = null; res(v); };
+      $("c-ok").onclick = () => done(true);
+      $("c-cancel").onclick = () => done(false);
+      m.onclick = (e) => { if (e.target === m) done(false); };
+    });
+  }
+
   // ------------------------------------------------------------------
   // محرّك الدرس
   // ------------------------------------------------------------------
@@ -527,8 +542,8 @@
     $("m-close").addEventListener("click", closeModal);
     $("modal-stage").addEventListener("click", (e) => { if (e.target.id === "modal-stage") closeModal(); });
     $("btn-check").addEventListener("click", onCheck);
-    $("btn-quit").addEventListener("click", () => {
-      if (L && L.done > 0 && !confirm("هل تريد الخروج؟ سيضيع تقدّمك في هذه المرحلة.")) return;
+    $("btn-quit").addEventListener("click", async () => {
+      if (L && L.done > 0 && !(await ask("هل تريد الخروج؟", "سيضيع تقدّمك في هذه المرحلة.", "خروج"))) return;
       L = null;
       show("screen-home");
     });
@@ -540,8 +555,8 @@
       else startReview();
     });
     $("btn-review").addEventListener("click", startReview);
-    $("btn-reset").addEventListener("click", () => {
-      if (!confirm("سيتم حذف كل تقدّمك ونقاطك. هل أنت متأكد؟")) return;
+    $("btn-reset").addEventListener("click", async () => {
+      if (!(await ask("إعادة ضبط التقدّم؟", "سيُحذف كل تقدّمك ونقاطك ونجومك.", "احذف التقدّم"))) return;
       state = defaultState();
       save();
       renderHome();
