@@ -41,7 +41,11 @@
   });
   const sciOf = qid => bySci(qid.split(".")[0]);
   const lessonOf = qid => { const [s, l] = qid.split("."); return bySci(s).lessons[+l]; };
-  const srcHtml = src => src ? `<div class="src">📚 المصدر: <a href="${src.url}" target="_blank" rel="noopener">«${src.book}» لـ${src.author}، ${/^[٠-٩]+\//.test(src.page) ? "" : "ص "}${src.page}</a> <span class="muted">(المكتبة الشاملة)</span></div>` : "";
+  const srcHtml = src => {
+    if (!src) return "";
+    const ref = `«${src.book}» لـ${src.author}، ${/^[٠-٩]+\//.test(src.page) ? "" : "ص "}${src.page}`;
+    return `<div class="src">📚 المصدر: ${src.url ? `<a href="${src.url}" target="_blank" rel="noopener">${ref}</a>` : `<b>${ref}</b>`} <span class="muted">(${src.via || "المكتبة الشاملة"})</span></div>`;
+  };
   const topicsOf = qids => [...new Set(qids.map(id => id.split(".").slice(0, 2).join(".")))].map(t => { const [sid, li] = t.split("."); return { sid, li: +li }; });
 
   /* ---------- الحالة ---------- */
