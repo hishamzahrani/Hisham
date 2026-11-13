@@ -40,6 +40,7 @@ npm run build                      # يجمع الملفات في www/
 npx @capacitor/assets generate     # يولّد الأيقونات وشاشة البداية من resources/
 npx cap sync
 ```
+- **بدون Mac؟** راجع [`CODEMAGIC.md`](CODEMAGIC.md): بناء iOS وAndroid ونشرهما من المتصفح.
 - **Android:** شغّل `npx cap open android`، ثم في Android Studio اختر **Build → Generate Signed Bundle (AAB)**، وارفع الملف إلى Play Console. احفظ ملف التوقيع (keystore) في مكان آمن.
 - **iOS** (يحتاج جهاز Mac عليه Xcode): شغّل `npx cap open ios`، ثم فعّل **In-App Purchase** في Signing & Capabilities، ثم **Product → Archive → Distribute App**.
 - معرّف التطبيق `ae.quranquest.app`، ويمكن تغييره في `capacitor.config.json` قبل أول رفع.

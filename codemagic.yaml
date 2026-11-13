@@ -1,0 +1,88 @@
+# إعداد Codemagic لبناء «مسابقات قرآنية» ونشره دون الحاجة إلى جهاز Mac.
+# الخطوات التفصيلية في CODEMAGIC.md
+#
+# قبل أول بناء، أضف في لوحة Codemagic:
+#  - iOS: تكامل App Store Connect API باسم "QuranQuest ASC" (Team settings → Integrations)
+#  - Android: مفتاح توقيع باسم "quranquest_keystore" (Team settings → Code signing identities → Android keystores)
+#             ومجموعة متغيرات "google_play" فيها GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+
+workflows:
+  # ---------------------------------------------------------------- iOS
+  ios-release:
+    name: iOS — App Store / TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: QuranQuest ASC
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ae.quranquest.app
+      vars:
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+        # المعرّف الرقمي للتطبيق (Apple ID) من App Store Connect → App Information
+        APP_STORE_APPLE_ID: 0000000000
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: تثبيت الحزم
+        script: npm ci
+      - name: تجميع ملفات التطبيق
+        script: npm run build
+      - name: مزامنة Capacitor
+        script: npx cap sync ios
+      - name: تثبيت CocoaPods
+        script: cd ios/App && pod install
+      - name: إعداد التوقيع
+        script: xcode-project use-profiles
+      - name: رقم البناء التالي
+        script: |
+          cd $CM_BUILD_DIR/ios/App
+          LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          agvtool new-version -all $((LATEST + 1))
+      - name: بناء ملف IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true      # يظهر في TestFlight للتجربة
+        submit_to_app_store: false      # الإرسال للمراجعة يدويًّا من App Store Connect
+
+  # ---------------------------------------------------------------- Android
+  android-release:
+    name: Android — Google Play
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      android_signing:
+        - quranquest_keystore
+      groups:
+        - google_play
+      node: 20
+      java: 17
+    scripts:
+      - name: تثبيت الحزم
+        script: npm ci
+      - name: تجميع ملفات التطبيق
+        script: npm run build
+      - name: مزامنة Capacitor
+        script: npx cap sync android
+      - name: موقع Android SDK
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: بناء ملف AAB
+        script: cd android && ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal                 # مسار الاختبار الداخلي
+        submit_as_draft: true
