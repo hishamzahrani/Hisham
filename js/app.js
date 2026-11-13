@@ -40,6 +40,7 @@
     daily: { day: null, xp: 0 },
     progress: {},          // { [juz]: { subs: { [k]: stars } } }
     units: {},             // { [u]: stars }
+    gates: {},             // { [juz]: true } — اجتاز مراجعة الأجزاء السابقة قبل دخول الجزء
     stats: {},             // { [cat]: { c, t } }
     mistakes: [],          // ["juz:index", ...]
     lastPos: {},           // موضع الجواب الصحيح في آخر عرض لكل سؤال
@@ -466,6 +467,21 @@
       return;
     }
     sfx.tap();
+    if (k === 1 && needsGate(j)) {
+      const prev = gateJuzs(j);
+      modalSel = { gate: j };
+      showModal({
+        badge: ic("rub"),
+        badgeBg: "var(--gold)",
+        title: `مراجعة قبل دخول الجزء ${toAr(j)}`,
+        sub: prev.length === 1 ? `${toAr(GATE_PER_JUZ)} أسئلة من الجزء ${toAr(prev[0])}`
+          : `${toAr(GATE_PER_JUZ)} أسئلة من كل جزء من الأجزاء ${toAr(prev[0])} – ${toAr(prev[prev.length - 1])} — ${toAr(prev.length * GATE_PER_JUZ)} سؤالًا`,
+        chips: `<span style="border-color:var(--gold)">يُفتح الدرس الأول من الجزء ${toAr(j)} بعد إتمامها، ولا تُنقص القلوب</span>`,
+        stars: 0,
+        startLabel: "ابدأ المراجعة",
+      });
+      return;
+    }
     modalSel = { j, k };
     const s = stageByJuz(j);
     const sub = subsOf(j)[k - 1];
@@ -662,6 +678,14 @@
 
   const startStage = (j, k) => startLesson("stage", itemsForSub(j, k), { juz: j, k });
   const startUnit = (u) => startLesson("unit", itemsForUnit(u), { u });
+  // مراجعة الدخول: قبل أول درس في الجزء j تُعرض ٥ أسئلة من كل جزء سبقه (من ٣٠ إلى j+1)
+  const GATE_PER_JUZ = 5;
+  const gateJuzs = (j) => STAGES.map((s) => s.juz).filter((x) => x > j).sort((a, b) => b - a);
+  const needsGate = (j) => gateJuzs(j).length > 0 && !state.gates[j] && !subDone(j, 1);
+  function itemsForGate(j) {
+    return gateJuzs(j).flatMap((x) => diverseSample(juzItems(x), GATE_PER_JUZ));
+  }
+  const startGate = (j) => startLesson("gate", itemsForGate(j), { juz: j });
   function startReview() {
     const items = state.mistakes.map(qById).filter(Boolean);
     startLesson("review", shuffle(items).slice(0, 10));
@@ -881,6 +905,9 @@
         const p = state.progress[j] || (state.progress[j] = { subs: {} });
         firstClear = !p.subs[k];
         p.subs[k] = Math.max(stars, p.subs[k] || 0);
+      } else if (L.mode === "gate") {
+        firstClear = !state.gates[j];
+        state.gates[j] = true;
       } else if (L.mode === "unit") {
         firstClear = !state.units[u];
         state.units[u] = Math.max(stars, state.units[u] || 0);
@@ -921,6 +948,8 @@
       } else {
         sub = `أتممت ${subsOf(j)[k - 1].short} من الجزء ${toAr(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
       }
+    } else if (L.mode === "gate") {
+      sub = `أتممت مراجعة الأجزاء السابقة، وفُتح لك الدرس الأول من الجزء ${toAr(j)}`;
     } else sub = L.mode === "review" ? "أتممت جلسة المراجعة" : "أتممت جلسة التدريب";
     $("r-sub").textContent = sub;
     $("r-stars").innerHTML = passed && (L.mode === "stage" || isUnit) ? starsHtml(stars, 3) : "";
@@ -953,7 +982,8 @@
     );
     $("m-start").addEventListener("click", () => {
       closeModal();
-      if (modalSel.u != null) startUnit(modalSel.u); else startStage(modalSel.j, modalSel.k);
+      if (modalSel.gate != null) startGate(modalSel.gate);
+      else if (modalSel.u != null) startUnit(modalSel.u); else startStage(modalSel.j, modalSel.k);
     });
     $("m-close").addEventListener("click", closeModal);
     $("modal-stage").addEventListener("click", (e) => { if (e.target.id === "modal-stage") closeModal(); });
@@ -963,12 +993,17 @@
       L = null;
       show("screen-home");
     });
-    $("btn-continue").addEventListener("click", () => { L = null; show("screen-home"); });
+    $("btn-continue").addEventListener("click", () => {
+      const after = L && L.mode === "gate" && state.gates[L.meta.juz] ? L.meta.juz : null;
+      L = null; show("screen-home");
+      if (after != null) openStage(after, 1); // بعد المراجعة يُعرض الدرس الأول مباشرة
+    });
     $("btn-retry").addEventListener("click", () => {
       const { mode, meta } = L;
       if (mode === "stage") startStage(meta.juz, meta.k);
       else if (mode === "unit") startUnit(meta.u);
       else if (mode === "skill") startSkill(meta.cat);
+      else if (mode === "gate") startGate(meta.juz);
       else startReview();
     });
     $("btn-review").addEventListener("click", startReview);
