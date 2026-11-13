@@ -64,22 +64,32 @@
         s.progress[j] = { subs };
       }
     });
-    // ترحيل: كان لكل جزء ستة دروس والاختبار في المرحلة ٧؛ صار عدد الدروس متغيرًا
-    if (!s.subsV) {
-      Object.keys(s.progress).forEach((j) => {
-        const subs = s.progress[j] && s.progress[j].subs;
-        const L = lessonsOf(j);
-        if (subs && L > MIN_LESSONS && subs[7]) {
-          const t = subs[7];
-          for (let k = 7; k <= L + 1; k++) subs[k] = Math.max(subs[k] || 0, t);
+    // ترحيل عدد الدروس: يتغير بزيادة أسئلة الجزء، فيُنقل الاختبار المجتاز إلى موضعه الجديد
+    // ويُعدّ ما أُضيف من دروس مجتازًا، حتى لا يُغلق جزء أتمّه المتسابق من قبل.
+    // subsL يحفظ عدد دروس كل جزء عند آخر حفظ؛ والنسخ الأقدم بلا subsL تُقدَّر من الإصدار السابق.
+    const PREV_L_V2 = { 30: 10, 2: 7, 4: 7, 5: 7, 10: 7 };
+    if (!s.subsL) s.subsL = {};
+    Object.keys(s.progress).forEach((j) => {
+      const subs = s.progress[j] && s.progress[j].subs;
+      if (!subs) return;
+      const prev = s.subsL[j] || (s.subsV === 2 ? PREV_L_V2[j] || MIN_LESSONS : MIN_LESSONS);
+      const L = lessonsOf(j);
+      if (prev !== L) {
+        const t = subs[prev + 1];
+        if (L > prev) {
+          if (t) for (let k = prev + 1; k <= L + 1; k++) subs[k] = Math.max(subs[k] || 0, t);
+        } else {
+          Object.keys(subs).forEach((k) => { if (+k > L) delete subs[k]; });
+          if (t) subs[L + 1] = t;
         }
-      });
-      s.subsV = 2;
-    }
+      }
+    });
+    s.subsV = 3;
     if (!s.units) s.units = {};
     return s;
   }
   function save() {
+    STAGES.forEach((st) => { state.subsL[st.juz] = lessonsOf(st.juz); });
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) {}
   }
 
