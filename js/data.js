@@ -13,16 +13,24 @@
  *  maqasid  : دلالة السورة والآيات ومقاصدها
  *  makki    : المكي والمدني
  *
- * الحقول: a = نص الآية، r = موضعها، q = السؤال، e = الشرح بعد الإجابة.
+ * الحقول: a = نص الآية، r = موضعها، q = السؤال، e = الشرح بعد الإجابة، s = المصدر (اختياري).
+ * إذا لم يُذكر المصدر يُستخرج من الشرح (مثل «البخاري») أو يُعرض مرجع عام للتوسّع بحسب المحور.
  */
 
 const CATEGORIES = {
-  mufradat: { name: "تفسير المفردات", icon: "📖", color: "#1cb0f6" },
-  nuzul:    { name: "أسباب النزول",   icon: "🕊️", color: "#ff9600" },
-  balagha:  { name: "البلاغة القرآنية", icon: "✨", color: "#ce82ff" },
-  tafsir:   { name: "تفسير الآية",     icon: "💡", color: "#58cc02" },
-  maqasid:  { name: "دلالة السورة والآيات", icon: "🧭", color: "#ff4b4b" },
-  makki:    { name: "مكي ومدني",       icon: "🕋", color: "#2b70c9" },
+  maqasid:  { name: "التعريف بالسورة ومقاصدها", icon: "🧭", color: "#ff4b4b" },
+  makki:    { name: "المكي والمدني",       icon: "🕋", color: "#2b70c9" },
+  nuzul:    { name: "أسباب النزول",        icon: "🕊️", color: "#ff9600" },
+  munasaba: { name: "المناسبة والسياق",    icon: "🔗", color: "#00a8a8" },
+  qiraat:   { name: "القراءات",            icon: "🎙️", color: "#8e5cd9" },
+  mufradat: { name: "غريب المفردات",       icon: "📖", color: "#1cb0f6" },
+  balagha:  { name: "البلاغة والإعراب",    icon: "✨", color: "#ce82ff" },
+  tafsir:   { name: "التفسير الإجمالي والتحليلي", icon: "💡", color: "#58cc02" },
+  athar:    { name: "الأحاديث والآثار",    icon: "📜", color: "#b07a3c" },
+  ahkam:    { name: "الأحكام الفقهية",     icon: "⚖️", color: "#e05297" },
+  aqida:    { name: "المسائل العقدية",     icon: "☝️", color: "#3c8d5a" },
+  usul:     { name: "الدلالات الأصولية",   icon: "🧩", color: "#6b7a8f" },
+  fawaid:   { name: "الهدايات والفوائد",   icon: "🌱", color: "#7cb518" },
 };
 
 const STAGES = [
@@ -1158,11 +1166,11 @@ const STAGES = [
 // أدوات لإضافة الأسئلة من ملفات js/more-*.js
 // ------------------------------------------------------------------
 /** اختيار من متعدد: الخيار الأول هو الصحيح */
-function mcq(c, a, r, q, o, e) { return { t: "mcq", c, a, r, q, o, e }; }
+function mcq(c, a, r, q, o, e, ...src) { return { t: "mcq", c, a, r, q, o, e, s: src.filter(Boolean).pop() }; }
 /** مطابقة كلمات بمعانيها */
-function match(p, e, c = "mufradat") { return { t: "match", c, q: "صِلْ كل كلمة بمعناها", p, e }; }
+function match(p, e, c = "mufradat", s) { return { t: "match", c, q: "صِلْ كل كلمة بمعناها", p, e, s }; }
 /** صح أم خطأ: v = true إذا كانت العبارة صحيحة */
-function tf(c, q, v, e, a, r) { return { t: "tf", c, q, v, e, a, r }; }
+function tf(c, q, v, e, a, r, s) { return { t: "tf", c, q, v, e, a, r, s }; }
 /** مكية أم مدنية */
 function makkiQ(surah, isMakki, e, a, r) {
   return { t: "mcq", c: "makki", a, r, q: `سورة ${surah}:`, o: isMakki ? ["مكية", "مدنية"] : ["مدنية", "مكية"], e };
@@ -1171,4 +1179,33 @@ function makkiQ(surah, isMakki, e, a, r) {
 function addQ(juz, list) {
   const s = STAGES.find((x) => x.juz === juz);
   if (s) s.questions.push(...list);
+}
+
+/** المراجع العامة لكل محور عند عدم ذكر مصدر خاص للسؤال */
+const DEFAULT_REFS = {
+  maqasid: "التحرير والتنوير لابن عاشور (مقدمة السورة)",
+  makki: "الإتقان في علوم القرآن للسيوطي، وتفسير ابن كثير (مطلع السورة)",
+  nuzul: "أسباب النزول للواحدي، ولباب النقول للسيوطي",
+  munasaba: "التحرير والتنوير لابن عاشور",
+  qiraat: "النشر في القراءات العشر لابن الجزري",
+  mufradat: "المفردات في غريب القرآن للراغب الأصفهاني، وتفسير ابن كثير",
+  balagha: "التحرير والتنوير لابن عاشور، والكشاف للزمخشري",
+  tafsir: "تفسير ابن كثير، وتفسير السعدي",
+  athar: "كتب الحديث المذكورة في الشرح",
+  ahkam: "الجامع لأحكام القرآن للقرطبي",
+  aqida: "تفسير ابن كثير",
+  usul: "روضة الناظر لابن قدامة، وكتب أصول الفقه",
+  fawaid: "تفسير السعدي",
+};
+const HADITH_RE = /(البخاري|مسلم|الترمذي|أبو داود|أبي داود|النسائي|أحمد|ابن حبان|الحاكم|ابن ماجه|الصحيحين)/;
+
+/** يعيد {label, text} لمصدر السؤال */
+function sourceOf(q) {
+  if (q.s) return { label: "المصدر", text: q.s };
+  const e = q.e || "";
+  const paren = e.match(/\(([^()]*)\)[^()]*$/);
+  if (paren && HADITH_RE.test(paren[1])) return { label: "المصدر", text: paren[1].trim() };
+  const rawa = e.match(/(رواه|روى|أخرجه) ([^.،؛]*)/);
+  if (rawa && HADITH_RE.test(rawa[2])) return { label: "المصدر", text: rawa[2].replace(/ عن .*$/, "").trim() };
+  return { label: "للتوسع يُنظر", text: DEFAULT_REFS[q.c] || "كتب التفسير" };
 }

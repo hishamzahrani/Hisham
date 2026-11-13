@@ -100,6 +100,15 @@ button { font-family: inherit; }
   display: flex; justify-content: space-between; align-items: center;
   box-shadow: inset 0 -4px 0 rgba(0,0,0,.18);
 }
+.unit-title {
+  width: 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin: 26px 0 0; padding-bottom: 6px; border-bottom: 2px solid var(--line);
+}
+.unit-title span { font-size: 20px; font-weight: 800; }
+.unit-title small { color: var(--muted); }
+.node.unit-final { width: 88px; height: 82px; font-size: 36px; background: var(--gold); box-shadow: 0 7px 0 var(--gold-dark); }
+.node.unit-final.locked { background: var(--locked); box-shadow: 0 7px 0 var(--locked-dark); }
+.node.unit-final.done { background: #ff9600; box-shadow: 0 7px 0 #cc7800; }
 .unit-banner.locked { background: var(--locked); color: var(--muted); }
 .ub-text { min-width: 0; }
 .ub-text b { font-size: 18px; display: block; line-height: 1.3; }
@@ -173,7 +182,7 @@ button { font-family: inherit; }
 .panel { border: 2px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
 .panel h2 { margin: 0 0 6px; font-size: 20px; }
 .big-number { font-size: 56px; font-weight: 800; text-align: center; color: var(--blue); line-height: 1.1; margin-top: 8px; }
-.skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
 .skill-btn {
   border: 2px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text);
   padding: 12px 8px; cursor: pointer; font-weight: 700; font-size: 14px; box-shadow: 0 3px 0 var(--line);
@@ -262,7 +271,9 @@ button { font-family: inherit; }
 .lesson-footer.bad .fb-head { color: var(--red-dark); }
 .fb-answer { font-weight: 700; margin-top: 4px; }
 .lesson-footer.bad .fb-answer { color: var(--red-dark); }
-.fb-explain { margin: 6px 0 0; font-size: 15px; max-height: 32vh; overflow-y: auto; }
+.fb-explain { margin: 6px 0 0; font-size: 15px; max-height: 28vh; overflow-y: auto; }
+.fb-source { margin: 6px 0 0; font-size: 13px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; }
+.fb-source:empty { display: none; }
 .lesson-footer.ok .btn-primary { background: var(--green); }
 .lesson-footer.bad .btn-primary { background: var(--red); box-shadow: 0 4px 0 var(--red-dark); }
 

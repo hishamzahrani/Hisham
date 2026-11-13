@@ -51,8 +51,8 @@
             <button class="btn btn-primary btn-block" id="btn-review">ابدأ المراجعة</button>
           </div>
           <div class="panel">
-            <h2>تدريب حسب المهارة</h2>
-            <p class="muted">اختر مهارة لتتدرّب على أسئلتها من المراحل التي فتحتها.</p>
+            <h2>تدريب حسب المحور</h2>
+            <p class="muted">اختر محورًا لتتدرّب على أسئلته من الأجزاء التي فتحتها.</p>
             <div id="skill-buttons" class="skill-grid"></div>
           </div>
         </div>
@@ -63,12 +63,12 @@
             <div class="kpis">
               <div class="kpi"><span>🔥</span><b id="k-streak">0</b><small>أيام متتالية</small></div>
               <div class="kpi"><span>⭐</span><b id="k-xp">0</b><small>نقطة خبرة</small></div>
-              <div class="kpi"><span>👑</span><b id="k-stars">0</b><small>نجمة من ٦٣٠</small></div>
+              <div class="kpi"><span>👑</span><b id="k-stars">0</b><small id="k-stars-max">نجمة</small></div>
               <div class="kpi"><span>🎯</span><b id="k-acc">0%</b><small>دقة الإجابات</small></div>
             </div>
           </div>
           <div class="panel">
-            <h2>إتقان المهارات</h2>
+            <h2>إتقان المحاور</h2>
             <div id="skill-bars"></div>
           </div>
           <div class="panel">
@@ -104,6 +104,7 @@
           <div class="fb-head"><span id="fb-icon"></span><b id="fb-title"></b></div>
           <div class="fb-answer" id="fb-answer"></div>
           <p class="fb-explain" id="fb-explain"></p>
+          <p class="fb-source" id="fb-source"></p>
         </div>
         <button class="btn btn-primary btn-block" id="btn-check" disabled>تحقّق</button>
       </footer>
@@ -160,6 +161,7 @@
   <script src="js/more-4.js"></script>
   <script src="js/more-5.js"></script>
   <script src="js/more-6.js"></script>
+  <script src="js/more-7.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
