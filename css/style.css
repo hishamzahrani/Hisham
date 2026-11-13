@@ -466,3 +466,5 @@ h1, h2, .unit-title span, .ub-text b { font-family: "Reem Kufi", "Tajawal", "Ami
 
 /* أقواس الآيات ﴿﴾ تُرسم دائمًا بخط المصحف ليكون اتجاهها صحيحًا */
 .orn { font-family: "Amiri", serif; font-weight: 400; }
+.ayah-text { unicode-bidi: isolate; direction: rtl; }
+.ayah-edge { white-space: nowrap; unicode-bidi: isolate; direction: rtl; }
