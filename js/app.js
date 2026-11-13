@@ -102,16 +102,23 @@
   };
   // نص الآية بين القوسين المزخرفين: كل قوس ملتصق بالكلمة المجاورة داخل عزلٍ يمين-يسار
   // حتى لا ينفصل عنها عند التفاف السطر ولا يُعاد ترتيبه في محرّك Safari
+  // تصغير خط الآيات الطويلة قليلًا لتقل أسطرها
+  function ayahSize(a) {
+    const n = String(a).replace(/[\u064B-\u0652\u0670\u06D6-\u06ED]/g, "").length;
+    return n > 70 ? " ayah-xl" : n > 45 ? " ayah-l" : "";
+  }
   function ayahHtml(a) {
     const w = String(a).trim().replace(/\s+(\u06DD)/g, "\u00A0$1").split(/[ \t\n]+/);
-    const O = '<span class="orn">\u200F\uFD3E\u200F</span>', C = '<span class="orn">\u200F\uFD3F\u200F</span>';
+    // القوس داخل عزلٍ يسار-يمين: لا يعكس أي محرّك رسمَه، ويبقى موضعه تابعًا للسياق العربي حوله
+    // يُكتب القوس الأيمن بالرمز U+FD3F والأيسر بـ U+FD3E لأن رسمهما الخام (دون عكس) هو المطابق للمصحف
+    const O = '<span class="orn" dir="ltr">\uFD3F</span>', C = '<span class="orn" dir="ltr">\uFD3E</span>';
     const glue = (h) => `<span class="ayah-edge" dir="rtl">${h}</span>`;
     if (w.length === 1) return glue(O + esc(w[0]) + C);
     const first = w.shift(), last = w.pop();
     return [glue(O + esc(first)), ...w.map(esc), glue(esc(last) + C)].join(" ");
   }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
-    .replace(/[\uFD3E\uFD3F]/g, '<span class="orn">$&</span>'); // أقواس الآيات بخط المصحف
+    .replace(/[\uFD3E\uFD3F]/g, (c) => `<span class="orn" dir="ltr">${c === "\uFD3E" ? "\uFD3F" : "\uFD3E"}</span>`); // أقواس الآيات بخط المصحف
   const toAr = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
   const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
@@ -684,7 +691,7 @@
     chip.style.background = cat.color;
     chip.innerHTML = `${ic(cat.icon)}<span>${cat.name}${L.mode !== "stage" ? " — الجزء " + toAr(juz) : ""}</span>`;
     $("q-text").innerHTML = esc(q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q);
-    $("q-ayah").innerHTML = q.a ? `<div class="ayah-text" dir="rtl">${ayahHtml(q.a)}</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
+    $("q-ayah").innerHTML = q.a ? `<div class="ayah-text${ayahSize(q.a)}" dir="rtl">${ayahHtml(q.a)}</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
 
     const footer = $("lesson-footer");
     footer.classList.remove("ok", "bad");
