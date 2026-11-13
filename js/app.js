@@ -6,15 +6,22 @@
   // ------------------------------------------------------------------
   const STORE_KEY = "quran-quest-v1";
   const DAILY_GOAL = 30;
-  const LESSONS = 6;        // دروس متنوعة في كل جزء
+  const MIN_LESSONS = 6;    // أقل عدد من الدروس في الجزء
+  const LESSON_SIZE = 10;   // الحدّ الأعلى لأسئلة الدرس الواحد تقريبًا
   const TEST_SIZE = 8;      // أسئلة اختبار الجزء
   const UNIT_SIZE = 15;     // أسئلة الجولة الختامية للوحدة
   const CAT_ORDER = Object.keys(CATEGORIES);
 
-  // المراحل الفرعية السبع لكل جزء: ستة دروس متنوعة + اختبار الجزء
-  const SUBS = ["١", "٢", "٣", "٤", "٥", "٦"].map((n, i) => ({ k: i + 1, short: `الدرس ${n}` }))
-    .concat([{ k: 7, short: "اختبار الجزء", test: true }]);
-  const SUB_COUNT = SUBS.length;
+  // المراحل الفرعية لكل جزء: دروس متنوعة (عددها بحسب أسئلة الجزء، ٦ على الأقل) + اختبار الجزء
+  const AR_DIG = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+  const lessonsOf = (j) => {
+    const st = STAGES.find((x) => x.juz === +j);
+    return Math.max(MIN_LESSONS, Math.ceil((st ? st.questions.length : 0) / LESSON_SIZE));
+  };
+  const subCount = (j) => lessonsOf(j) + 1;
+  const subsCache = {};
+  const subsOf = (j) => subsCache[j] || (subsCache[j] = Array.from({ length: lessonsOf(j) }, (_, i) => ({ k: i + 1, short: `الدرس ${AR_DIG(i + 1)}` }))
+    .concat([{ k: lessonsOf(j) + 1, short: "اختبار الجزء", test: true }]));
 
   // الوحدات: كل وحدة خمسة أجزاء، تُختم بجولة ختامية
   const UNIT_NAMES = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة"];
@@ -52,10 +59,22 @@
       const p = s.progress[j];
       if (p && !p.subs) {
         const subs = {};
-        for (let k = 1; k <= SUB_COUNT; k++) subs[k] = p.stars || 1;
+        for (let k = 1; k <= subCount(j); k++) subs[k] = p.stars || 1;
         s.progress[j] = { subs };
       }
     });
+    // ترحيل: كان لكل جزء ستة دروس والاختبار في المرحلة ٧؛ صار عدد الدروس متغيرًا
+    if (!s.subsV) {
+      Object.keys(s.progress).forEach((j) => {
+        const subs = s.progress[j] && s.progress[j].subs;
+        const L = lessonsOf(j);
+        if (subs && L > MIN_LESSONS && subs[7]) {
+          const t = subs[7];
+          for (let k = 7; k <= L + 1; k++) subs[k] = Math.max(subs[k] || 0, t);
+        }
+      });
+      s.subsV = 2;
+    }
     if (!s.units) s.units = {};
     return s;
   }
@@ -105,8 +124,9 @@
     if (lessonCache[j]) return lessonCache[j];
     const all = juzItems(j);
     const ordered = CAT_ORDER.flatMap((c) => all.filter((it) => it.q.c === c));
-    const buckets = Array.from({ length: LESSONS }, () => []);
-    ordered.forEach((it, i) => buckets[i % LESSONS].push(it));
+    const n = lessonsOf(j);
+    const buckets = Array.from({ length: n }, () => []);
+    ordered.forEach((it, i) => buckets[i % n].push(it));
     return (lessonCache[j] = buckets);
   }
 
@@ -128,8 +148,8 @@
   // ---------- التقدّم ----------
   const subStars = (j, k) => (state.progress[j] && state.progress[j].subs[k]) || 0;
   const subDone = (j, k) => subStars(j, k) > 0;
-  const juzDone = (j) => subDone(j, SUB_COUNT);
-  const juzSubsDone = (j) => SUBS.filter((s) => subDone(j, s.k)).length;
+  const juzDone = (j) => subDone(j, subCount(j));
+  const juzSubsDone = (j) => subsOf(j).filter((s) => subDone(j, s.k)).length;
   const unitStars = (u) => state.units[u] || 0;
   const unitDone = (u) => unitStars(u) > 0;
   const isUnitUnlocked = (u) => juzDone(UNITS[u].to);
@@ -199,7 +219,7 @@
   function currentSub() {
     for (const U of UNITS) {
       for (let j = U.from; j >= U.to; j--) {
-        for (let k = 1; k <= SUB_COUNT; k++) {
+        for (let k = 1; k <= subCount(j); k++) {
           if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : null;
         }
       }
@@ -260,7 +280,7 @@
     Object.values(state.progress).reduce((a, p) => a + Object.values(p.subs || {}).reduce((x, y) => x + y, 0), 0) +
     Object.values(state.units).reduce((a, b) => a + b, 0);
   const doneJuzCount = () => STAGES.filter((s) => juzDone(s.juz)).length;
-  const MAX_STARS = (30 * SUB_COUNT + UNITS.length) * 3;
+  const MAX_STARS = (STAGES.reduce((a, st) => a + subCount(st.juz), 0) + UNITS.length) * 3;
 
   function renderHome() {
     $("stat-streak").textContent = toAr(effectiveStreak());
@@ -300,10 +320,10 @@
         const b = el("div", "unit-banner" + (locked ? " locked" : ""));
         if (!locked) b.style.backgroundColor = U.color;
         b.innerHTML = `<div class="ub-text"><small>الجزء ${toAr(j)}</small><b>${esc(s.title)}</b><small>${esc(s.surahs)}</small></div>
-          <div class="ub-progress">${juzDone(j) ? ic("trophy") : locked ? ic("lock") : `${toAr(juzSubsDone(j))}/${toAr(SUB_COUNT)}`}</div>`;
+          <div class="ub-progress">${juzDone(j) ? ic("trophy") : locked ? ic("lock") : `${toAr(juzSubsDone(j))}/${toAr(subCount(j))}`}</div>`;
         path.appendChild(b);
 
-        SUBS.forEach((sub) => {
+        subsOf(j).forEach((sub) => {
           const k = sub.k;
           const unlocked = isSubUnlocked(j, k);
           const stars = subStars(j, k);
@@ -387,7 +407,7 @@
   let modalSel = null;
 
   function itemsForSub(j, k) {
-    if (k <= LESSONS) return lessonBuckets(j)[k - 1];
+    if (k <= lessonsOf(j)) return lessonBuckets(j)[k - 1];
     return diverseSample(juzItems(j), TEST_SIZE);
   }
   function itemsForUnit(u) {
@@ -418,7 +438,7 @@
     if (!isSubUnlocked(j, k)) {
       sfx.bad();
       const prevUnit = k === 1 && isUnitEnd(j + 1) && juzDone(j + 1);
-      toast(k > 1 ? `أكمل ${SUBS[k - 2].short} أولًا`
+      toast(k > 1 ? `أكمل ${subsOf(j)[k - 2].short} أولًا`
         : prevUnit ? "اجتز الجولة الختامية للوحدة السابقة أولًا"
         : `أكمل اختبار الجزء ${toAr(j + 1)} أولًا`);
       return;
@@ -426,15 +446,15 @@
     sfx.tap();
     modalSel = { j, k };
     const s = stageByJuz(j);
-    const sub = SUBS[k - 1];
-    const items = k <= LESSONS ? lessonBuckets(j)[k - 1] : juzItems(j);
+    const sub = subsOf(j)[k - 1];
+    const items = k <= lessonsOf(j) ? lessonBuckets(j)[k - 1] : juzItems(j);
     const count = sub.test ? Math.min(TEST_SIZE, items.length) : items.length;
     const stars = subStars(j, k);
     showModal({
       badge: sub.test ? ic("trophy") : toAr(k),
       badgeBg: sub.test ? "var(--navy)" : "var(--primary)",
       title: `${sub.short} — ${s.title}`,
-      sub: `الجزء ${toAr(j)} — المرحلة ${toAr(k)} من ${toAr(SUB_COUNT)} — ${toAr(count)} أسئلة`,
+      sub: `الجزء ${toAr(j)} — المرحلة ${toAr(k)} من ${toAr(subCount(j))} — ${toAr(count)} أسئلة`,
       chips: sub.test ? `<span style="border-color:var(--navy)">أسئلة منوّعة من محاور الجزء كلها</span>` : catChips(items),
       stars,
       startLabel: stars ? "أعِد المرحلة" : sub.test ? "ابدأ الاختبار" : "ابدأ الدرس",
@@ -834,7 +854,7 @@
     const { juz: j, k, u } = L.meta;
     if (passed) {
       stars = L.mistakes === 0 ? 3 : L.mistakes <= 2 ? 2 : 1;
-      xp = L.total * 2 + (L.mode === "stage" ? stars * 2 + (k === SUB_COUNT ? 10 : 0) : 0) + (L.mode === "unit" ? 30 : 0);
+      xp = L.total * 2 + (L.mode === "stage" ? stars * 2 + (k === subCount(j) ? 10 : 0) : 0) + (L.mode === "unit" ? 30 : 0);
       if (L.mode === "stage") {
         const p = state.progress[j] || (state.progress[j] = { subs: {} });
         firstClear = !p.subs[k];
@@ -858,7 +878,7 @@
     }
     save();
 
-    const isTest = L.mode === "stage" && k === SUB_COUNT;
+    const isTest = L.mode === "stage" && k === subCount(j);
     const isUnit = L.mode === "unit";
     $("r-emoji").className = "result-emoji " + (!passed ? "fail" : isUnit ? "unit" : "win");
     $("r-emoji").innerHTML = ic(!passed ? "heartBroken" : isUnit ? "rub" : isTest ? "trophy" : "star", "", passed && !isUnit && !isTest);
@@ -875,9 +895,9 @@
     } else if (L.mode === "stage") {
       if (isTest) {
         sub = isUnitEnd(j) ? `أتممت الجزء ${toAr(j)}، وبقيت الجولة الختامية للوحدة`
-          : firstClear ? `أتممت الجزء ${toAr(j)} بمراحله السبع، وفُتح لك الجزء ${toAr(j - 1)}` : `أتممت اختبار الجزء ${toAr(j)}`;
+          : firstClear ? `أتممت الجزء ${toAr(j)} بمراحله كلها، وفُتح لك الجزء ${toAr(j - 1)}` : `أتممت اختبار الجزء ${toAr(j)}`;
       } else {
-        sub = `أتممت ${SUBS[k - 1].short} من الجزء ${toAr(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
+        sub = `أتممت ${subsOf(j)[k - 1].short} من الجزء ${toAr(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
       }
     } else sub = L.mode === "review" ? "أتممت جلسة المراجعة" : "أتممت جلسة التدريب";
     $("r-sub").textContent = sub;

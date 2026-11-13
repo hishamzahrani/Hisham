@@ -10,15 +10,16 @@ vm.createContext(ctx);
 vm.runInContext(code, ctx);
 const { STAGES, CATEGORIES, sourceOf } = ctx.__out;
 const CAT_ORDER = Object.keys(CATEGORIES);
-const LESSONS = 6;
+const MIN_LESSONS = 6, LESSON_SIZE = 10; // مطابق لـ app.js
 
 const rows = [];
 for (const st of STAGES) {
   const items = st.questions.map((q, i) => ({ q, i }));
   // نفس توزيع الدروس في التطبيق
   const ordered = CAT_ORDER.flatMap((c) => items.filter((it) => it.q.c === c));
+  const L = Math.max(MIN_LESSONS, Math.ceil(items.length / LESSON_SIZE));
   const lessonOf = {};
-  ordered.forEach((it, n) => (lessonOf[it.i] = (n % LESSONS) + 1));
+  ordered.forEach((it, n) => (lessonOf[it.i] = (n % L) + 1));
   for (const it of ordered) {
     const q = it.q;
     let answer, others;
