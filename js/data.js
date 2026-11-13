@@ -18,19 +18,19 @@
  */
 
 const CATEGORIES = {
-  maqasid:  { name: "التعريف بالسورة ومقاصدها", icon: "🧭", color: "#ff4b4b" },
-  makki:    { name: "المكي والمدني",       icon: "🕋", color: "#2b70c9" },
-  nuzul:    { name: "أسباب النزول",        icon: "🕊️", color: "#ff9600" },
-  munasaba: { name: "المناسبة والسياق",    icon: "🔗", color: "#00a8a8" },
-  qiraat:   { name: "القراءات",            icon: "🎙️", color: "#8e5cd9" },
-  mufradat: { name: "غريب المفردات",       icon: "📖", color: "#1cb0f6" },
-  balagha:  { name: "البلاغة والإعراب",    icon: "✨", color: "#ce82ff" },
-  tafsir:   { name: "التفسير الإجمالي والتحليلي", icon: "💡", color: "#58cc02" },
-  athar:    { name: "الأحاديث والآثار",    icon: "📜", color: "#b07a3c" },
-  ahkam:    { name: "الأحكام الفقهية",     icon: "⚖️", color: "#e05297" },
-  aqida:    { name: "المسائل العقدية",     icon: "☝️", color: "#3c8d5a" },
-  usul:     { name: "الدلالات الأصولية",   icon: "🧩", color: "#6b7a8f" },
-  fawaid:   { name: "الهدايات والفوائد",   icon: "🌱", color: "#7cb518" },
+  maqasid:  { name: "التعريف بالسورة ومقاصدها", icon: "🧭", color: "#b5473a" },
+  makki:    { name: "المكي والمدني",       icon: "🕋", color: "#1e3a5f" },
+  nuzul:    { name: "أسباب النزول",        icon: "🕊️", color: "#b8741a" },
+  munasaba: { name: "المناسبة والسياق",    icon: "🔗", color: "#23757a" },
+  qiraat:   { name: "القراءات",            icon: "🎙️", color: "#5b4a8a" },
+  mufradat: { name: "غريب المفردات",       icon: "📖", color: "#2b5f93" },
+  balagha:  { name: "البلاغة والإعراب",    icon: "✨", color: "#9a4f73" },
+  tafsir:   { name: "التفسير الإجمالي والتحليلي", icon: "💡", color: "#1f7a5c" },
+  athar:    { name: "الأحاديث والآثار",    icon: "📜", color: "#7d5a2c" },
+  ahkam:    { name: "الأحكام الفقهية",     icon: "⚖️", color: "#6f7f22" },
+  aqida:    { name: "المسائل العقدية",     icon: "☝️", color: "#2f5d4a" },
+  usul:     { name: "الدلالات الأصولية",   icon: "🧩", color: "#5b6878" },
+  fawaid:   { name: "الهدايات والفوائد",   icon: "🌱", color: "#3f8a3a" },
 };
 
 const STAGES = [

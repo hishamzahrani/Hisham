@@ -18,7 +18,7 @@
 
   // الوحدات: كل وحدة خمسة أجزاء، تُختم بجولة ختامية
   const UNIT_NAMES = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة"];
-  const UNIT_COLORS = ["#58cc02", "#1cb0f6", "#ce82ff", "#ff9600", "#ff4b4b", "#2b70c9"];
+  const UNIT_COLORS = ["#1f7a5c", "#1e3a5f", "#23757a", "#7d5a2c", "#5b4a8a", "#2b5f93"];   // زمردي، كحلي، فيروزي، برونزي، بنفسجي داكن، أزرق
   const UNITS = UNIT_NAMES.map((name, u) => ({ u, name: `الوحدة ${name}`, from: 30 - u * 5, to: 26 - u * 5, color: UNIT_COLORS[u] }));
   const unitOf = (j) => Math.floor((30 - j) / 5);
   const isUnitEnd = (j) => (j - 1) % 5 === 0;
@@ -294,7 +294,7 @@
         const s = stageByJuz(j);
         const locked = !isSubUnlocked(j, 1);
         const b = el("div", "unit-banner" + (locked ? " locked" : ""));
-        if (!locked) b.style.background = U.color;
+        if (!locked) b.style.backgroundColor = U.color;
         b.innerHTML = `<div class="ub-text"><small>الجزء ${toAr(j)}</small><b>${esc(s.title)}</b><small>${esc(s.surahs)}</small></div>
           <div class="ub-progress">${juzDone(j) ? "🏆" : locked ? "🔒" : `${toAr(juzSubsDone(j))}/${toAr(SUB_COUNT)}`}</div>`;
         path.appendChild(b);
@@ -428,10 +428,10 @@
     const stars = subStars(j, k);
     showModal({
       badge: sub.test ? "🏆" : toAr(k),
-      badgeBg: sub.test ? "#ce82ff" : "var(--green)",
+      badgeBg: sub.test ? "var(--navy)" : "var(--primary)",
       title: `${sub.short} — ${s.title}`,
       sub: `الجزء ${toAr(j)} — المرحلة ${toAr(k)} من ${toAr(SUB_COUNT)} — ${toAr(count)} أسئلة`,
-      chips: sub.test ? `<span style="border-color:#ce82ff">أسئلة منوّعة من محاور الجزء كلها</span>` : catChips(items),
+      chips: sub.test ? `<span style="border-color:var(--navy)">أسئلة منوّعة من محاور الجزء كلها</span>` : catChips(items),
       stars,
       startLabel: stars ? "أعِد المرحلة" : sub.test ? "ابدأ الاختبار" : "ابدأ الدرس",
     });
