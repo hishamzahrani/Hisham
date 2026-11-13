@@ -37,6 +37,7 @@
     stats: {},             // { [cat]: { c, t } }
     mistakes: [],          // ["juz:index", ...]
     sound: true,
+    premium: null,         // { plan, token, until } — يُعتمد عليه فقط بعد تحقق الخادم
   });
 
   let state = load();
@@ -127,9 +128,18 @@
   const juzSubsDone = (j) => SUBS.filter((s) => subDone(j, s.k)).length;
   const unitStars = (u) => state.units[u] || 0;
   const unitDone = (u) => unitStars(u) > 0;
-  const isUnitUnlocked = (u) => juzDone(UNITS[u].to);
+  const isUnitUnlocked = (u) => juzDone(UNITS[u].to) && !(isPremiumUnit(u) && !isPremium());
+
+  // ---------- الاشتراك ----------
+  const M = typeof MONETIZATION !== "undefined" ? MONETIZATION : { enabled: false };
+  const isPremium = () => !M.enabled || !!(state.premium && state.premium.until > Date.now());
+  const isPremiumUnit = (u) => M.enabled && u >= M.freeUnits;
+  const premiumLocked = (j) => isPremiumUnit(unitOf(j)) && !isPremium();
 
   function isSubUnlocked(j, k) {
+    return progressUnlocked(j, k) && !premiumLocked(j);
+  }
+  function progressUnlocked(j, k) {
     if (k === 1) {
       if (j === 30) return true;
       return juzDone(j + 1) && (!isUnitEnd(j + 1) || unitDone(unitOf(j + 1)));
@@ -140,7 +150,7 @@
     for (const U of UNITS) {
       for (let j = U.from; j >= U.to; j--) {
         for (let k = 1; k <= SUB_COUNT; k++) {
-          if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : null;
+          if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : progressUnlocked(j, k) ? { j, k, plus: true } : null;
         }
       }
       if (!unitDone(U.u)) return isUnitUnlocked(U.u) ? { u: U.u } : null;
@@ -231,7 +241,8 @@
     };
 
     UNITS.forEach((U) => {
-      path.appendChild(el("div", "unit-title", `<span>${U.name}</span><small>الأجزاء ${toAr(U.from)} – ${toAr(U.to)}</small>`));
+      const plusBadge = isPremiumUnit(U.u) ? `<em class="plus-badge">${isPremium() ? "بلس ✓" : "💎 بلس"}</em>` : `<em class="free-badge">مجانية</em>`;
+      path.appendChild(el("div", "unit-title", `<span>${U.name} ${plusBadge}</span><small>الأجزاء ${toAr(U.from)} – ${toAr(U.to)}</small>`));
 
       for (let j = U.from; j >= U.to; j--) {
         const s = stageByJuz(j);
@@ -245,14 +256,15 @@
         SUBS.forEach((sub) => {
           const k = sub.k;
           const unlocked = isSubUnlocked(j, k);
+          const plusGate = !unlocked && progressUnlocked(j, k);
           const stars = subStars(j, k);
           addNode({
-            cls: (sub.test ? "test" : "") + (!unlocked ? " locked" : stars ? " done" : ""),
-            content: sub.test ? "🏆" : !unlocked ? "🔒" : toAr(k),
+            cls: (sub.test ? "test" : "") + (plusGate ? " premium" : !unlocked ? " locked" : stars ? " done" : ""),
+            content: plusGate ? "💎" : sub.test ? "🏆" : !unlocked ? "🔒" : toAr(k),
             label: sub.short,
             stars,
             isCur: cur && cur.j === j && cur.k === k,
-            bubble: k === 1 ? `ابدأ الجزء ${toAr(j)}` : "ابدأ",
+            bubble: cur && cur.plus ? "اشترك للمتابعة" : k === 1 ? `ابدأ الجزء ${toAr(j)}` : "ابدأ",
             onClick: () => openStage(j, k),
             aria: `الجزء ${j}، ${sub.short}`,
           });
@@ -306,6 +318,7 @@
     $("k-stars-max").textContent = `نجمة من ${toAr(MAX_STARS)}`;
     let c = 0, t = 0;
     Object.values(state.stats).forEach((s) => { c += s.c; t += s.t; });
+    $("plan-status").textContent = !M.enabled ? "" : isPremium() && state.premium ? "مشترك في «بلس» ✓" : "الخطة المجانية (الوحدة الأولى)";
     $("k-acc").textContent = t ? `${toAr(Math.round((c / t) * 100))}٪` : "—";
     const bars = $("skill-bars");
     bars.innerHTML = "";
@@ -353,6 +366,7 @@
   }
 
   function openStage(j, k) {
+    if (progressUnlocked(j, k) && premiumLocked(j)) { openPlus(); return; }
     if (!isSubUnlocked(j, k)) {
       sfx.bad();
       const prevUnit = k === 1 && isUnitEnd(j + 1) && juzDone(j + 1);
@@ -380,6 +394,7 @@
   }
 
   function openUnit(u) {
+    if (juzDone(UNITS[u].to) && isPremiumUnit(u) && !isPremium()) { openPlus(); return; }
     if (!isUnitUnlocked(u)) {
       sfx.bad();
       toast(`أكمل اختبار الجزء ${toAr(UNITS[u].to)} أولًا 🔒`);
@@ -400,6 +415,58 @@
     });
   }
   function closeModal() { $("modal-stage").classList.remove("open"); }
+
+  // ---------- شاشة الاشتراك ----------
+  let selectedPlan = null;
+  const money = (n) => toAr(n.toFixed(2)).replace(".", "٫");
+  function renderPlus() {
+    if (!M.enabled) return;
+    const box = $("plus-plans");
+    box.innerHTML = "";
+    if (!selectedPlan) selectedPlan = (M.plans.find((p) => p.best) || M.plans[0]).id;
+    M.plans.forEach((p) => {
+      const b = el("button", "plan" + (p.id === selectedPlan ? " sel" : "") + (p.best ? " best" : ""),
+        `${p.best ? '<span class="plan-flag">الأوفر</span>' : ""}<b>${esc(p.name)}</b>
+         <span class="plan-price">${money(p.price)} <small>${esc(M.currency)}</small></span>
+         <small class="muted">${esc(p.period)}</small><small class="plan-note">${esc(p.note || "")}</small>`);
+      b.addEventListener("click", () => { selectedPlan = p.id; sfx.tap(); renderPlus(); });
+      box.appendChild(b);
+    });
+    const active = isPremium() && state.premium;
+    $("plus-status").textContent = active
+      ? `اشتراكك فعّال حتى ${new Date(state.premium.until).toLocaleDateString("ar")}`
+      : "";
+    $("plus-cta").textContent = active ? "اشتراكك فعّال ✓" : "اشترك الآن";
+    $("plus-cta").disabled = !!active;
+    const sc = $("plus-scholar");
+    sc.hidden = !M.scholarshipContact;
+    if (M.scholarshipContact) sc.querySelector("b").textContent = M.scholarshipContact;
+  }
+  function openPlus() {
+    sfx.tap();
+    renderPlus();
+    show("screen-plus");
+  }
+  function subscribe() {
+    const url = M.checkoutLinks && M.checkoutLinks[selectedPlan];
+    if (!url) { toast("الدفع الإلكتروني يُفعَّل قريبًا إن شاء الله"); return; }
+    window.open(url, "_blank", "noopener");
+  }
+  async function activate() {
+    const code = $("plus-code").value.trim();
+    if (!code) { toast("أدخل رمز التفعيل الذي وصلك بعد الدفع"); return; }
+    if (!M.licenseApi) { toast("التفعيل غير متاح بعد؛ سيُفعَّل مع بوابة الدفع"); return; }
+    try {
+      const r = await fetch(M.licenseApi, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: code }) });
+      const d = await r.json();
+      if (!d.valid) { toast("الرمز غير صحيح أو منتهي الصلاحية"); return; }
+      state.premium = { plan: d.plan, token: code, until: d.until };
+      save();
+      sfx.win();
+      toast("تم تفعيل الاشتراك، بارك الله لك");
+      renderPlus();
+    } catch (_) { toast("تعذّر الاتصال بالخادم، حاول لاحقًا"); }
+  }
 
   // نافذة تأكيد داخل الصفحة (بديل confirm)
   function ask(text, sub, okLabel) {
@@ -618,7 +685,8 @@
     $("fb-answer").textContent = !ok && correctText ? correctText : "";
     $("fb-explain").textContent = q.e || "";
     const src = sourceOf(q);
-    $("fb-source").innerHTML = `📚 <b>${esc(src.label)}:</b> ${esc(src.text)}`;
+    $("fb-source").innerHTML = `📚 <b>${esc(src.label)}:</b> ${esc(src.text)}` +
+      (q.verified ? ` <span class="verified">✔ موثّق من المكتبة الشاملة</span>` : "");
     const btn = $("btn-check");
     btn.style.display = "";
     btn.disabled = false;
@@ -731,6 +799,10 @@
       else startReview();
     });
     $("btn-review").addEventListener("click", startReview);
+    $("btn-plus").addEventListener("click", openPlus);
+    $("plus-close").addEventListener("click", () => show("screen-home"));
+    $("plus-cta").addEventListener("click", subscribe);
+    $("plus-activate").addEventListener("click", activate);
     $("btn-reset").addEventListener("click", async () => {
       if (!(await ask("إعادة ضبط التقدّم؟", "سيُحذف كل تقدّمك ونقاطك ونجومك.", "احذف التقدّم"))) return;
       state = defaultState();

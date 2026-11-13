@@ -71,6 +71,11 @@
             <h2>إتقان المحاور</h2>
             <div id="skill-bars"></div>
           </div>
+          <div class="panel plus-panel">
+            <h2>💎 مسابقات قرآنية بلس</h2>
+            <p class="muted" id="plan-status"></p>
+            <button class="btn btn-gold btn-block" id="btn-plus">عرض خطط الاشتراك</button>
+          </div>
           <div class="panel">
             <button class="btn btn-ghost btn-block" id="btn-reset">إعادة ضبط التقدّم</button>
           </div>
@@ -128,6 +133,34 @@
       </footer>
     </section>
 
+    <!-- ============ شاشة الاشتراك ============ -->
+    <section id="screen-plus" class="screen">
+      <header class="lesson-top">
+        <button class="icon-btn" id="plus-close" aria-label="إغلاق">✕</button>
+      </header>
+      <main class="plus-main">
+        <div class="plus-hero">💎</div>
+        <h1>مسابقات قرآنية <span class="plus-word">بلس</span></h1>
+        <p class="muted center">الوحدة الأولى (جزء عمّ إلى الجزء ٢٦) مجانية دائمًا.<br>اشترك لتكمل رحلتك حتى ختام الأجزاء الثلاثين.</p>
+        <ul class="plus-perks">
+          <li>📚 الوحدات من الثانية إلى السادسة: الأجزاء ٢٥ إلى ١</li>
+          <li>🧭 أكثر من ٧٥٠ سؤالًا إضافيًا في ١٣ محورًا من منهج دراسة الآية</li>
+          <li>👑 الجولات الختامية لكل وحدة</li>
+        </ul>
+        <div class="plans" id="plus-plans"></div>
+        <p class="plus-status" id="plus-status"></p>
+        <button class="btn btn-primary btn-block" id="plus-cta">اشترك الآن</button>
+        <div class="plus-code">
+          <label for="plus-code">لديك رمز تفعيل؟</label>
+          <div class="plus-code-row">
+            <input id="plus-code" type="text" inputmode="text" autocomplete="off" placeholder="أدخل الرمز">
+            <button class="btn btn-ghost" id="plus-activate">تفعيل</button>
+          </div>
+        </div>
+        <p class="muted center small" id="plus-scholar" hidden>غير قادر على الاشتراك؟ نمنح الاشتراك مجانًا لطلاب العلم وغير القادرين — تواصل معنا: <b></b></p>
+      </main>
+    </section>
+
     <!-- ============ نافذة المرحلة ============ -->
     <div class="modal" id="modal-stage" role="dialog" aria-modal="true">
       <div class="modal-card">
@@ -154,6 +187,7 @@
     <div class="toast" id="toast"></div>
   </div>
 
+  <script src="js/config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/more-1.js"></script>
   <script src="js/more-2.js"></script>
@@ -162,6 +196,7 @@
   <script src="js/more-5.js"></script>
   <script src="js/more-6.js"></script>
   <script src="js/more-7.js"></script>
+  <script src="js/verified.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
