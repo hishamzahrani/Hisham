@@ -261,9 +261,11 @@
   }
   // ---------- القلوب: مشتركة بين الدروس، وتمتلئ بعد مدة الانتظار ----------
   const HEARTS_MAX = (M.hearts && M.hearts.max) || 5;
-  const REFILL_MS = ((M.hearts && M.hearts.refillHours) || 16) * 3600e3;
+  const REFILL_MS = ((M.hearts && M.hearts.refillHours) || 8) * 3600e3;
   function syncHearts() {
     const h = state.hearts || (state.hearts = { count: HEARTS_MAX, refillAt: null });
+    // إن قصُرت مدة الامتلاء (كانت ١٦ ساعة) فلا ينتظر أحد أكثر من المدة الحالية
+    if (h.refillAt && h.refillAt - Date.now() > REFILL_MS) { h.refillAt = Date.now() + REFILL_MS; save(); }
     if (h.refillAt && Date.now() >= h.refillAt) { h.count = HEARTS_MAX; h.refillAt = null; save(); }
     return h;
   }
