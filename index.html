@@ -24,6 +24,7 @@
           <span class="brand-mark">﴿</span><span>مسابقات قرآنية</span><span class="brand-mark">﴾</span>
         </div>
         <div class="stats-row">
+          <button class="stat stat-btn" id="stat-hearts-btn" title="القلوب"><span class="stat-ico">❤️</span><b id="stat-hearts">٥</b></button>
           <span class="stat" title="أيام متتالية"><span class="stat-ico">🔥</span><b id="stat-streak">0</b></span>
           <span class="stat" title="نقاط الخبرة"><span class="stat-ico">⭐</span><b id="stat-xp">0</b></span>
           <span class="stat" title="الأجزاء المكتملة"><span class="stat-ico">🏆</span><b id="stat-done">0</b>/٣٠</span>
@@ -141,11 +142,10 @@
       <main class="plus-main">
         <div class="plus-hero">💎</div>
         <h1>مسابقات قرآنية <span class="plus-word">بلس</span></h1>
-        <p class="muted center">الوحدة الأولى (جزء عمّ إلى الجزء ٢٦) مجانية دائمًا.<br>اشترك لتكمل رحلتك حتى ختام الأجزاء الثلاثين.</p>
+        <p class="muted center">التطبيق بكل أجزائه مجاني للجميع.<br>الاشتراك اختياري لمن يرغب في اللعب دون انتظار، ودعم استمرار المشروع.</p>
         <ul class="plus-perks">
-          <li>📚 الوحدات من الثانية إلى السادسة: الأجزاء ٢٥ إلى ١</li>
-          <li>🧭 أكثر من ٧٥٠ سؤالًا إضافيًا في ١٣ محورًا من منهج دراسة الآية</li>
-          <li>👑 الجولات الختامية لكل وحدة</li>
+          <li>❤️ قلوب غير محدودة: تابع التعلّم دون انتظار امتلاء القلوب</li>
+          <li>🤝 ادعم استمرار المشروع وتطوير محتواه</li>
         </ul>
         <div class="plans" id="plus-plans"></div>
         <p class="plus-status" id="plus-status"></p>
@@ -162,6 +162,20 @@
         <p class="muted center small" id="plus-scholar" hidden>غير قادر على الاشتراك؟ نمنح الاشتراك مجانًا لطلاب العلم وغير القادرين — تواصل معنا: <b></b></p>
       </main>
     </section>
+
+    <!-- ============ نافذة القلوب ============ -->
+    <div class="modal" id="modal-hearts" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="h-icons" id="h-icons"></div>
+        <h2 id="h-title">قلوبك</h2>
+        <div class="h-count"><span>❤️</span><b id="h-count">٥</b></div>
+        <p class="h-timer" id="h-timer"></p>
+        <p class="muted" id="h-sub"></p>
+        <button class="btn btn-primary btn-block" id="h-practice">راجع أخطاءك (بدون قلوب)</button>
+        <button class="btn btn-gold btn-block" id="h-plus">💎 قلوب غير محدودة مع «بلس»</button>
+        <button class="btn btn-ghost btn-block" id="h-close">حسنًا</button>
+      </div>
+    </div>
 
     <!-- ============ نافذة المرحلة ============ -->
     <div class="modal" id="modal-stage" role="dialog" aria-modal="true">

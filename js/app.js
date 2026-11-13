@@ -6,7 +6,6 @@
   // ------------------------------------------------------------------
   const STORE_KEY = "quran-quest-v1";
   const DAILY_GOAL = 30;
-  const MAX_HEARTS = 5;
   const LESSONS = 6;        // دروس متنوعة في كل جزء
   const TEST_SIZE = 8;      // أسئلة اختبار الجزء
   const UNIT_SIZE = 15;     // أسئلة الجولة الختامية للوحدة
@@ -129,12 +128,11 @@
   const juzSubsDone = (j) => SUBS.filter((s) => subDone(j, s.k)).length;
   const unitStars = (u) => state.units[u] || 0;
   const unitDone = (u) => unitStars(u) > 0;
-  const isUnitUnlocked = (u) => juzDone(UNITS[u].to) && !(isPremiumUnit(u) && !isPremium());
+  const isUnitUnlocked = (u) => juzDone(UNITS[u].to);
 
   // ---------- الاشتراك ----------
   const M = typeof MONETIZATION !== "undefined" ? MONETIZATION : { enabled: false };
-  const isPremium = () => !M.enabled || !!(state.premium && state.premium.until > Date.now());
-  const isPremiumUnit = (u) => M.enabled && u >= M.freeUnits;
+  const isPremium = () => !!(M.enabled && state.premium && state.premium.until > Date.now());
   const NP = window.NativePurchases && window.NativePurchases.isNative ? window.NativePurchases : null;
   let storePackages = {};   // planId -> RevenueCat package (في التطبيق فقط)
 
@@ -165,12 +163,29 @@
       renderHome();
     } catch (_) { /* المتجر غير متاح الآن؛ يبقى التطبيق يعمل بالوحدة المجانية */ }
   }
-  const premiumLocked = (j) => isPremiumUnit(unitOf(j)) && !isPremium();
+  // ---------- القلوب: مشتركة بين الدروس، وتمتلئ بعد مدة الانتظار ----------
+  const HEARTS_MAX = (M.hearts && M.hearts.max) || 5;
+  const REFILL_MS = ((M.hearts && M.hearts.refillHours) || 16) * 3600e3;
+  function syncHearts() {
+    const h = state.hearts || (state.hearts = { count: HEARTS_MAX, refillAt: null });
+    if (h.refillAt && Date.now() >= h.refillAt) { h.count = HEARTS_MAX; h.refillAt = null; save(); }
+    return h;
+  }
+  const heartsLeft = () => (isPremium() ? Infinity : syncHearts().count);
+  function loseHeart() {
+    if (isPremium()) return;
+    const h = syncHearts();
+    h.count = Math.max(0, h.count - 1);
+    if (!h.refillAt) h.refillAt = Date.now() + REFILL_MS;   // يبدأ العدّ من أول قلب يُفقد
+    save();
+  }
+  function fmtLeft(ms) {
+    const t = Math.max(0, Math.ceil(ms / 1000));
+    const hh = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60), ss = t % 60;
+    return toAr(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`);
+  }
 
   function isSubUnlocked(j, k) {
-    return progressUnlocked(j, k) && !premiumLocked(j);
-  }
-  function progressUnlocked(j, k) {
     if (k === 1) {
       if (j === 30) return true;
       return juzDone(j + 1) && (!isUnitEnd(j + 1) || unitDone(unitOf(j + 1)));
@@ -181,7 +196,7 @@
     for (const U of UNITS) {
       for (let j = U.from; j >= U.to; j--) {
         for (let k = 1; k <= SUB_COUNT; k++) {
-          if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : progressUnlocked(j, k) ? { j, k, plus: true } : null;
+          if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : null;
         }
       }
       if (!unitDone(U.u)) return isUnitUnlocked(U.u) ? { u: U.u } : null;
@@ -246,6 +261,7 @@
   function renderHome() {
     $("stat-streak").textContent = toAr(effectiveStreak());
     $("stat-xp").textContent = toAr(state.xp);
+    renderHeartsBadge();
     $("stat-done").textContent = toAr(doneJuzCount());
 
     const dx = todayXP();
@@ -272,8 +288,7 @@
     };
 
     UNITS.forEach((U) => {
-      const plusBadge = isPremiumUnit(U.u) ? `<em class="plus-badge">${isPremium() ? "بلس ✓" : "💎 بلس"}</em>` : `<em class="free-badge">مجانية</em>`;
-      path.appendChild(el("div", "unit-title", `<span>${U.name} ${plusBadge}</span><small>الأجزاء ${toAr(U.from)} – ${toAr(U.to)}</small>`));
+      path.appendChild(el("div", "unit-title", `<span>${U.name}</span><small>الأجزاء ${toAr(U.from)} – ${toAr(U.to)}</small>`));
 
       for (let j = U.from; j >= U.to; j--) {
         const s = stageByJuz(j);
@@ -287,15 +302,14 @@
         SUBS.forEach((sub) => {
           const k = sub.k;
           const unlocked = isSubUnlocked(j, k);
-          const plusGate = !unlocked && progressUnlocked(j, k);
           const stars = subStars(j, k);
           addNode({
-            cls: (sub.test ? "test" : "") + (plusGate ? " premium" : !unlocked ? " locked" : stars ? " done" : ""),
-            content: plusGate ? "💎" : sub.test ? "🏆" : !unlocked ? "🔒" : toAr(k),
+            cls: (sub.test ? "test" : "") + (!unlocked ? " locked" : stars ? " done" : ""),
+            content: sub.test ? "🏆" : !unlocked ? "🔒" : toAr(k),
             label: sub.short,
             stars,
             isCur: cur && cur.j === j && cur.k === k,
-            bubble: cur && cur.plus ? "اشترك للمتابعة" : k === 1 ? `ابدأ الجزء ${toAr(j)}` : "ابدأ",
+            bubble: k === 1 ? `ابدأ الجزء ${toAr(j)}` : "ابدأ",
             onClick: () => openStage(j, k),
             aria: `الجزء ${j}، ${sub.short}`,
           });
@@ -349,7 +363,7 @@
     $("k-stars-max").textContent = `نجمة من ${toAr(MAX_STARS)}`;
     let c = 0, t = 0;
     Object.values(state.stats).forEach((s) => { c += s.c; t += s.t; });
-    $("plan-status").textContent = !M.enabled ? "" : isPremium() && state.premium ? "مشترك في «بلس» ✓" : "الخطة المجانية (الوحدة الأولى)";
+    $("plan-status").textContent = !M.enabled ? "" : isPremium() && state.premium ? "مشترك في «بلس» ✓ — قلوب غير محدودة" : "التطبيق مجاني بالكامل، والاشتراك اختياري لمن يرغب";
     $("k-acc").textContent = t ? `${toAr(Math.round((c / t) * 100))}٪` : "—";
     const bars = $("skill-bars");
     bars.innerHTML = "";
@@ -397,7 +411,6 @@
   }
 
   function openStage(j, k) {
-    if (progressUnlocked(j, k) && premiumLocked(j)) { openPlus(); return; }
     if (!isSubUnlocked(j, k)) {
       sfx.bad();
       const prevUnit = k === 1 && isUnitEnd(j + 1) && juzDone(j + 1);
@@ -425,7 +438,6 @@
   }
 
   function openUnit(u) {
-    if (juzDone(UNITS[u].to) && isPremiumUnit(u) && !isPremium()) { openPlus(); return; }
     if (!isUnitUnlocked(u)) {
       sfx.bad();
       toast(`أكمل اختبار الجزء ${toAr(UNITS[u].to)} أولًا 🔒`);
@@ -446,6 +458,34 @@
     });
   }
   function closeModal() { $("modal-stage").classList.remove("open"); }
+
+  // ---------- نافذة القلوب ----------
+  let heartsTimer = null;
+  function renderHeartsBadge() {
+    const n = heartsLeft();
+    $("stat-hearts").textContent = n === Infinity ? "∞" : toAr(n);
+  }
+  function openHearts() {
+    const tick = () => {
+      const h = syncHearts();
+      const prem = isPremium();
+      $("h-count").textContent = prem ? "∞" : toAr(h.count);
+      $("h-icons").innerHTML = prem ? "❤️".repeat(HEARTS_MAX) :
+        Array.from({ length: HEARTS_MAX }, (_, i) => (i < h.count ? "❤️" : "<span class='off'>❤️</span>")).join("");
+      $("h-title").textContent = prem ? "قلوب غير محدودة" : h.count === 0 ? "نفدت قلوبك" : h.count < HEARTS_MAX ? "قلوبك" : "قلوبك ممتلئة";
+      $("h-timer").textContent = !prem && h.refillAt ? `تمتلئ كلها بعد ${fmtLeft(h.refillAt - Date.now())}` : "";
+      $("h-sub").textContent = prem ? "شكرًا لاشتراكك في «بلس»" :
+        h.count === 0 ? "انتظر حتى تمتلئ قلوبك، وتستطيع خلال ذلك مراجعة أخطائك والتدرّب على المحاور دون أن تخسر قلوبًا." :
+        `كل خطأ في الدروس يُنقص قلبًا، وتمتلئ القلوب بعد ${toAr(REFILL_MS / 3600e3)} ساعة من أول قلب تخسره.`;
+      $("h-plus").hidden = prem || !M.enabled;
+      renderHeartsBadge();
+    };
+    tick();
+    clearInterval(heartsTimer);
+    heartsTimer = setInterval(tick, 1000);
+    $("modal-hearts").classList.add("open");
+  }
+  function closeHearts() { clearInterval(heartsTimer); $("modal-hearts").classList.remove("open"); renderHome(); }
 
   // ---------- شاشة الاشتراك ----------
   let selectedPlan = null;
@@ -550,14 +590,18 @@
   // ------------------------------------------------------------------
   let L = null; // حالة الدرس الحالي
 
+  // الدروس والاختبارات والجولات الختامية تستهلك القلوب؛ أما المراجعة والتدريب فمجانيان دائمًا
+  const usesHearts = (mode) => mode === "stage" || mode === "unit";
+
   function startLesson(mode, items, meta = {}) {
     if (!items.length) { toast("لا توجد أسئلة متاحة بعد"); return; }
+    if (usesHearts(mode) && heartsLeft() <= 0) { openHearts(); return; }
     L = {
       mode, meta,
       queue: shuffle(items),
       total: items.length,
       done: 0,
-      hearts: MAX_HEARTS,
+      hearts: usesHearts(mode) ? heartsLeft() : Infinity,
       mistakes: 0,
       attempts: 0,
       seen: new Set(),
@@ -588,7 +632,7 @@
 
   function updateLessonTop() {
     $("lesson-fill").style.width = `${(L.done / L.total) * 100}%`;
-    $("hearts").textContent = toAr(L.hearts);
+    $("hearts").textContent = L.hearts === Infinity ? "∞" : toAr(L.hearts);
   }
 
   function nextQuestion() {
@@ -747,7 +791,7 @@
       sfx.ok();
     } else {
       L.mistakes++;
-      L.hearts--;
+      if (usesHearts(L.mode)) { loseHeart(); L.hearts = heartsLeft(); }
       L.queue.push(L.cur);
       if (!state.mistakes.includes(id)) state.mistakes.push(id);
       sfx.bad();
@@ -769,7 +813,7 @@
     const btn = $("btn-check");
     btn.style.display = "";
     btn.disabled = false;
-    btn.textContent = ok ? "متابعة" : (L.hearts > 0 ? "فهمت، متابعة" : "متابعة");
+    btn.textContent = ok ? "متابعة" : "فهمت، متابعة";
     btn.focus({ preventScroll: true });
   }
 
@@ -815,7 +859,10 @@
     $("r-emoji").textContent = !passed ? "💔" : isUnit ? "👑" : isTest ? "🏆" : stars === 3 ? "🌟" : "🎉";
     $("r-title").textContent = !passed ? "نفدت القلوب" : isUnit ? "أتممت الوحدة!" : isTest ? "أتممت الجزء!" : stars === 3 ? "إتقان تام!" : "أحسنت!";
     let sub = "";
-    if (!passed) sub = "لا بأس، المراجعة طريق الإتقان. حاول مرة أخرى!";
+    if (!passed) {
+      const h = syncHearts();
+      sub = h.refillAt ? `لا بأس، المراجعة طريق الإتقان. تمتلئ قلوبك بعد ${fmtLeft(h.refillAt - Date.now())}، وتستطيع حتى ذلك الحين مراجعة أخطائك دون قلوب.` : "لا بأس، المراجعة طريق الإتقان. حاول مرة أخرى!";
+    }
     else if (isUnit) {
       const U = UNITS[u];
       sub = u === UNITS.length - 1 ? "ختمتَ رحلة الثلاثين جزءًا كاملة! 🌙"
@@ -883,6 +930,13 @@
     $("plus-cta").addEventListener("click", subscribe);
     $("plus-activate").addEventListener("click", activate);
     $("plus-restore").addEventListener("click", restore);
+    $("stat-hearts-btn").addEventListener("click", openHearts);
+    $("h-close").addEventListener("click", closeHearts);
+    $("h-practice").addEventListener("click", () => { closeHearts(); state.mistakes.length ? startReview() : (document.querySelector('[data-tab="tab-review"]').click()); });
+    $("h-plus").addEventListener("click", () => { closeHearts(); openPlus(); });
+    $("modal-hearts").addEventListener("click", (e) => { if (e.target.id === "modal-hearts") closeHearts(); });
+    // تحديث عداد القلوب في الشريط العلوي إذا امتلأت أثناء فتح التطبيق
+    setInterval(() => { if ($("screen-home").classList.contains("active")) renderHeartsBadge(); }, 30000);
     $("btn-reset").addEventListener("click", async () => {
       if (!(await ask("إعادة ضبط التقدّم؟", "سيُحذف كل تقدّمك ونقاطك ونجومك.", "احذف التقدّم"))) return;
       state = defaultState();
