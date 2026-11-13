@@ -86,6 +86,9 @@
   const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  /** نجوم التقييم (نجمة ثمانية)؛ total لعرض الفارغة أيضًا */
+  const starsHtml = (n, total = n) =>
+    Array.from({ length: total }, (_, i) => `<span class="${i < n ? "on" : "off"}">${ic("star", "", true)}</span>`).join("");
 
   const stageByJuz = (j) => STAGES.find((s) => s.juz === j);
   const qById = (id) => {
@@ -279,11 +282,11 @@
       n++;
       const btn = el("button", "node " + cls);
       btn.setAttribute("aria-label", aria);
-      btn.textContent = content;
+      btn.innerHTML = content;
       if (isCur) { btn.classList.add("current"); wrap.appendChild(el("div", "start-bubble", bubble)); }
       btn.addEventListener("click", onClick);
       wrap.appendChild(btn);
-      wrap.appendChild(el("div", "node-label", `<div class="node-stars">${stars ? "⭐".repeat(stars) : ""}</div>${label}`));
+      wrap.appendChild(el("div", "node-label", `<div class="node-stars">${starsHtml(stars)}</div>${label}`));
       path.appendChild(wrap);
     };
 
@@ -296,7 +299,7 @@
         const b = el("div", "unit-banner" + (locked ? " locked" : ""));
         if (!locked) b.style.backgroundColor = U.color;
         b.innerHTML = `<div class="ub-text"><small>الجزء ${toAr(j)}</small><b>${esc(s.title)}</b><small>${esc(s.surahs)}</small></div>
-          <div class="ub-progress">${juzDone(j) ? "🏆" : locked ? "🔒" : `${toAr(juzSubsDone(j))}/${toAr(SUB_COUNT)}`}</div>`;
+          <div class="ub-progress">${juzDone(j) ? ic("trophy") : locked ? ic("lock") : `${toAr(juzSubsDone(j))}/${toAr(SUB_COUNT)}`}</div>`;
         path.appendChild(b);
 
         SUBS.forEach((sub) => {
@@ -305,7 +308,7 @@
           const stars = subStars(j, k);
           addNode({
             cls: (sub.test ? "test" : "") + (!unlocked ? " locked" : stars ? " done" : ""),
-            content: sub.test ? "🏆" : !unlocked ? "🔒" : toAr(k),
+            content: sub.test ? ic("trophy") : !unlocked ? ic("lock") : toAr(k),
             label: sub.short,
             stars,
             isCur: cur && cur.j === j && cur.k === k,
@@ -321,7 +324,7 @@
       const uStars = unitStars(U.u);
       addNode({
         cls: "unit-final" + (!uUnlocked ? " locked" : uStars ? " done" : ""),
-        content: uUnlocked ? "👑" : "🔒",
+        content: uUnlocked ? ic("rub") : ic("lock"),
         label: `الجولة الختامية<br>${U.name}`,
         stars: uStars,
         isCur: cur && cur.u === U.u,
@@ -349,7 +352,7 @@
     const grid = $("skill-buttons");
     grid.innerHTML = "";
     Object.entries(CATEGORIES).forEach(([key, c]) => {
-      const b = el("button", "skill-btn", `<span>${c.icon}</span>${c.name}`);
+      const b = el("button", "skill-btn", `<span style="color:${c.color}">${ic(c.icon)}</span>${c.name}`);
       b.style.borderBottomColor = c.color;
       b.addEventListener("click", () => startSkill(key));
       grid.appendChild(b);
@@ -363,7 +366,7 @@
     $("k-stars-max").textContent = `نجمة من ${toAr(MAX_STARS)}`;
     let c = 0, t = 0;
     Object.values(state.stats).forEach((s) => { c += s.c; t += s.t; });
-    $("plan-status").textContent = !M.enabled ? "" : isPremium() && state.premium ? "مشترك في «بلس» ✓ — قلوب غير محدودة" : "التطبيق مجاني بالكامل، والاشتراك اختياري لمن يرغب";
+    $("plan-status").textContent = !M.enabled ? "" : isPremium() && state.premium ? "مشترك في «بلس» — قلوب غير محدودة" : "التطبيق مجاني بالكامل، والاشتراك اختياري لمن يرغب";
     $("k-acc").textContent = t ? `${toAr(Math.round((c / t) * 100))}٪` : "—";
     const bars = $("skill-bars");
     bars.innerHTML = "";
@@ -371,7 +374,7 @@
       const s = state.stats[key] || { c: 0, t: 0 };
       const pct = s.t ? Math.round((s.c / s.t) * 100) : 0;
       const row = el("div", "skill-row");
-      row.innerHTML = `<div class="skill-row-head"><span>${cat.icon} ${cat.name}</span><span class="muted">${s.t ? toAr(pct) + "٪ — " + toAr(s.c) + "/" + toAr(s.t) : "لم تبدأ بعد"}</span></div>
+      row.innerHTML = `<div class="skill-row-head"><span class="row-name"><i style="color:${cat.color}">${ic(cat.icon)}</i>${cat.name}</span><span class="muted">${s.t ? toAr(pct) + "٪ — " + toAr(s.c) + "/" + toAr(s.t) : "لم تبدأ بعد"}</span></div>
         <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>`;
       bars.appendChild(row);
     });
@@ -395,17 +398,17 @@
   }
   const catChips = (items) => {
     const cats = CAT_ORDER.filter((c) => items.some((it) => it.q.c === c));
-    return cats.map((c) => `<span style="border-color:${CATEGORIES[c].color}">${CATEGORIES[c].icon} ${CATEGORIES[c].name}</span>`).join("");
+    return cats.map((c) => `<span style="border-color:${CATEGORIES[c].color}"><i style="color:${CATEGORIES[c].color}">${ic(CATEGORIES[c].icon)}</i>${CATEGORIES[c].name}</span>`).join("");
   };
 
   function showModal({ badge, badgeBg, title, sub, chips, stars, startLabel }) {
     const b = $("m-badge");
-    b.textContent = badge;
+    b.innerHTML = badge;
     b.style.background = badgeBg;
     $("m-title").textContent = title;
     $("m-surahs").textContent = sub;
     $("m-cats").innerHTML = chips;
-    $("m-stars").innerHTML = stars ? [1, 2, 3].map((i) => (i <= stars ? "⭐" : "<span style='opacity:.25'>⭐</span>")).join("") : "";
+    $("m-stars").innerHTML = stars ? starsHtml(stars, 3) : "";
     $("m-start").textContent = startLabel;
     $("modal-stage").classList.add("open");
   }
@@ -414,9 +417,9 @@
     if (!isSubUnlocked(j, k)) {
       sfx.bad();
       const prevUnit = k === 1 && isUnitEnd(j + 1) && juzDone(j + 1);
-      toast(k > 1 ? `أكمل ${SUBS[k - 2].short} أولًا 🔒`
-        : prevUnit ? "اجتز الجولة الختامية للوحدة السابقة أولًا 🔒"
-        : `أكمل اختبار الجزء ${toAr(j + 1)} أولًا 🔒`);
+      toast(k > 1 ? `أكمل ${SUBS[k - 2].short} أولًا`
+        : prevUnit ? "اجتز الجولة الختامية للوحدة السابقة أولًا"
+        : `أكمل اختبار الجزء ${toAr(j + 1)} أولًا`);
       return;
     }
     sfx.tap();
@@ -427,7 +430,7 @@
     const count = sub.test ? Math.min(TEST_SIZE, items.length) : items.length;
     const stars = subStars(j, k);
     showModal({
-      badge: sub.test ? "🏆" : toAr(k),
+      badge: sub.test ? ic("trophy") : toAr(k),
       badgeBg: sub.test ? "var(--navy)" : "var(--primary)",
       title: `${sub.short} — ${s.title}`,
       sub: `الجزء ${toAr(j)} — المرحلة ${toAr(k)} من ${toAr(SUB_COUNT)} — ${toAr(count)} أسئلة`,
@@ -440,7 +443,7 @@
   function openUnit(u) {
     if (!isUnitUnlocked(u)) {
       sfx.bad();
-      toast(`أكمل اختبار الجزء ${toAr(UNITS[u].to)} أولًا 🔒`);
+      toast(`أكمل اختبار الجزء ${toAr(UNITS[u].to)} أولًا`);
       return;
     }
     sfx.tap();
@@ -448,7 +451,7 @@
     const U = UNITS[u];
     const stars = unitStars(u);
     showModal({
-      badge: "👑",
+      badge: ic("rub"),
       badgeBg: "var(--gold)",
       title: `الجولة الختامية — ${U.name}`,
       sub: `أسئلة منوّعة من الأجزاء ${toAr(U.from)} – ${toAr(U.to)} — ${toAr(UNIT_SIZE)} سؤالًا`,
@@ -470,8 +473,8 @@
       const h = syncHearts();
       const prem = isPremium();
       $("h-count").textContent = prem ? "∞" : toAr(h.count);
-      $("h-icons").innerHTML = prem ? "❤️".repeat(HEARTS_MAX) :
-        Array.from({ length: HEARTS_MAX }, (_, i) => (i < h.count ? "❤️" : "<span class='off'>❤️</span>")).join("");
+      $("h-icons").innerHTML = Array.from({ length: HEARTS_MAX }, (_, i) =>
+        `<span class="${prem || i < h.count ? "on" : "off"}">${ic("heart", "", true)}</span>`).join("");
       $("h-title").textContent = prem ? "قلوب غير محدودة" : h.count === 0 ? "نفدت قلوبك" : h.count < HEARTS_MAX ? "قلوبك" : "قلوبك ممتلئة";
       $("h-timer").textContent = !prem && h.refillAt ? `تمتلئ كلها بعد ${fmtLeft(h.refillAt - Date.now())}` : "";
       $("h-sub").textContent = prem ? "شكرًا لاشتراكك في «بلس»" :
@@ -511,7 +514,7 @@
     $("plus-status").textContent = active
       ? `اشتراكك فعّال حتى ${new Date(state.premium.until).toLocaleDateString("ar")}`
       : "";
-    $("plus-cta").textContent = active ? "اشتراكك فعّال ✓" : "اشترك الآن";
+    $("plus-cta").textContent = active ? "اشتراكك فعّال" : "اشترك الآن";
     $("plus-cta").disabled = !!active;
     $("plus-code-box").hidden = !!NP;
     $("plus-restore").hidden = !NP;
@@ -648,7 +651,7 @@
     const cat = CATEGORIES[q.c];
     const chip = $("q-chip");
     chip.style.background = cat.color;
-    chip.textContent = `${cat.icon} ${cat.name}${L.mode !== "stage" ? " — الجزء " + toAr(juz) : ""}`;
+    chip.innerHTML = `${ic(cat.icon)}<span>${cat.name}${L.mode !== "stage" ? " — الجزء " + toAr(juz) : ""}</span>`;
     $("q-text").textContent = q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q;
     $("q-ayah").innerHTML = q.a ? `<div class="ayah-text">﴿${esc(q.a)}﴾</div>${q.r ? `<div class="ayah-ref">[${esc(q.r)}]</div>` : ""}` : "";
 
@@ -803,13 +806,13 @@
 
     const footer = $("lesson-footer");
     footer.classList.add(ok ? "ok" : "bad");
-    $("fb-icon").textContent = ok ? "✅" : "❌";
+    $("fb-icon").innerHTML = ic(ok ? "check" : "close");
     $("fb-title").textContent = ok ? pick(["أحسنت!", "ممتاز!", "بارك الله فيك!", "إجابة صحيحة!"]) : "الإجابة الصحيحة:";
     $("fb-answer").textContent = !ok && correctText ? correctText : "";
     $("fb-explain").textContent = q.e || "";
     const src = sourceOf(q);
-    $("fb-source").innerHTML = `📚 <b>${esc(src.label)}:</b> ${esc(src.text)}` +
-      (q.verified ? ` <span class="verified">✔ موثّق من المكتبة الشاملة</span>` : "");
+    $("fb-source").innerHTML = `${ic("sources")} <b>${esc(src.label)}:</b> ${esc(src.text)}` +
+      (q.verified ? ` <span class="verified">${ic("seal")}موثّق من المكتبة الشاملة</span>` : "");
     const btn = $("btn-check");
     btn.style.display = "";
     btn.disabled = false;
@@ -856,7 +859,8 @@
 
     const isTest = L.mode === "stage" && k === SUB_COUNT;
     const isUnit = L.mode === "unit";
-    $("r-emoji").textContent = !passed ? "💔" : isUnit ? "👑" : isTest ? "🏆" : stars === 3 ? "🌟" : "🎉";
+    $("r-emoji").className = "result-emoji " + (!passed ? "fail" : isUnit ? "unit" : "win");
+    $("r-emoji").innerHTML = ic(!passed ? "heartBroken" : isUnit ? "rub" : isTest ? "trophy" : "star", "", passed && !isUnit && !isTest);
     $("r-title").textContent = !passed ? "نفدت القلوب" : isUnit ? "أتممت الوحدة!" : isTest ? "أتممت الجزء!" : stars === 3 ? "إتقان تام!" : "أحسنت!";
     let sub = "";
     if (!passed) {
@@ -865,18 +869,18 @@
     }
     else if (isUnit) {
       const U = UNITS[u];
-      sub = u === UNITS.length - 1 ? "ختمتَ رحلة الثلاثين جزءًا كاملة! 🌙"
+      sub = u === UNITS.length - 1 ? "ختمتَ رحلة الثلاثين جزءًا كاملة"
         : `اجتزت الجولة الختامية لـ${U.name}` + (firstClear ? ` وفُتح لك الجزء ${toAr(U.to - 1)}` : "");
     } else if (L.mode === "stage") {
       if (isTest) {
-        sub = isUnitEnd(j) ? `أتممت الجزء ${toAr(j)}، وبقيت الجولة الختامية للوحدة 👑`
+        sub = isUnitEnd(j) ? `أتممت الجزء ${toAr(j)}، وبقيت الجولة الختامية للوحدة`
           : firstClear ? `أتممت الجزء ${toAr(j)} بمراحله السبع، وفُتح لك الجزء ${toAr(j - 1)}` : `أتممت اختبار الجزء ${toAr(j)}`;
       } else {
         sub = `أتممت ${SUBS[k - 1].short} من الجزء ${toAr(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
       }
     } else sub = L.mode === "review" ? "أتممت جلسة المراجعة" : "أتممت جلسة التدريب";
     $("r-sub").textContent = sub;
-    $("r-stars").innerHTML = passed && (L.mode === "stage" || isUnit) ? [1, 2, 3].map((i) => (i <= stars ? "⭐" : "<span class='off'>⭐</span>")).join("") : "";
+    $("r-stars").innerHTML = passed && (L.mode === "stage" || isUnit) ? starsHtml(stars, 3) : "";
     $("r-xp").textContent = `+${toAr(xp)}`;
     $("r-acc").textContent = `${toAr(acc)}٪`;
     const canRetry = !passed || L.mode === "stage" || isUnit;

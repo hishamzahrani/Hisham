@@ -18,19 +18,19 @@
  */
 
 const CATEGORIES = {
-  maqasid:  { name: "التعريف بالسورة ومقاصدها", icon: "🧭", color: "#b5473a" },
-  makki:    { name: "المكي والمدني",       icon: "🕋", color: "#1e3a5f" },
-  nuzul:    { name: "أسباب النزول",        icon: "🕊️", color: "#b8741a" },
-  munasaba: { name: "المناسبة والسياق",    icon: "🔗", color: "#23757a" },
-  qiraat:   { name: "القراءات",            icon: "🎙️", color: "#5b4a8a" },
-  mufradat: { name: "غريب المفردات",       icon: "📖", color: "#2b5f93" },
-  balagha:  { name: "البلاغة والإعراب",    icon: "✨", color: "#9a4f73" },
-  tafsir:   { name: "التفسير الإجمالي والتحليلي", icon: "💡", color: "#1f7a5c" },
-  athar:    { name: "الأحاديث والآثار",    icon: "📜", color: "#7d5a2c" },
-  ahkam:    { name: "الأحكام الفقهية",     icon: "⚖️", color: "#6f7f22" },
-  aqida:    { name: "المسائل العقدية",     icon: "☝️", color: "#2f5d4a" },
-  usul:     { name: "الدلالات الأصولية",   icon: "🧩", color: "#5b6878" },
-  fawaid:   { name: "الهدايات والفوائد",   icon: "🌱", color: "#3f8a3a" },
+  maqasid:  { name: "التعريف بالسورة ومقاصدها", icon: "compass", color: "#b5473a" },
+  makki:    { name: "المكي والمدني",       icon: "kaaba", color: "#1e3a5f" },
+  nuzul:    { name: "أسباب النزول",        icon: "descent", color: "#b8741a" },
+  munasaba: { name: "المناسبة والسياق",    icon: "link", color: "#23757a" },
+  qiraat:   { name: "القراءات",            icon: "waves", color: "#5b4a8a" },
+  mufradat: { name: "غريب المفردات",       icon: "book", color: "#2b5f93" },
+  balagha:  { name: "البلاغة والإعراب",    icon: "quill", color: "#9a4f73" },
+  tafsir:   { name: "التفسير الإجمالي والتحليلي", icon: "lantern", color: "#1f7a5c" },
+  athar:    { name: "الأحاديث والآثار",    icon: "scroll", color: "#7d5a2c" },
+  ahkam:    { name: "الأحكام الفقهية",     icon: "scales", color: "#6f7f22" },
+  aqida:    { name: "المسائل العقدية",     icon: "shield", color: "#2f5d4a" },
+  usul:     { name: "الدلالات الأصولية",   icon: "roots", color: "#5b6878" },
+  fawaid:   { name: "الهدايات والفوائد",   icon: "sprout", color: "#3f8a3a" },
 };
 
 const STAGES = [

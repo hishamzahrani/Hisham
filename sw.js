@@ -1,5 +1,5 @@
-const CACHE = "quran-quest-v5";
-const ASSETS = ["./", "index.html", "css/style.css", "js/config.js", "js/data.js", "js/more-1.js", "js/more-2.js", "js/more-3.js", "js/more-4.js", "js/more-5.js", "js/more-6.js", "js/more-7.js", "js/more-8.js", "js/verified.js", "js/app.js", "manifest.webmanifest", "icons/icon.svg"];
+const CACHE = "quran-quest-v6";
+const ASSETS = ["./", "index.html", "css/style.css", "js/icons.js", "js/config.js", "js/data.js", "js/more-1.js", "js/more-2.js", "js/more-3.js", "js/more-4.js", "js/more-5.js", "js/more-6.js", "js/more-7.js", "js/more-8.js", "js/verified.js", "js/app.js", "manifest.webmanifest", "icons/icon.svg"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

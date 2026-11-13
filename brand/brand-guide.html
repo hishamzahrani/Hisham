@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>دليل الهوية البصرية — مسابقات قرآنية</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1f7a5c; --primary-dark: #145a43; --primary-soft: #dcefe6;
+    --gold: #c9a227; --gold-dark: #94761a; --gold-ink: #3a2c05; --gold-soft: #f6edcf;
+    --navy: #1e3a5f; --navy-dark: #132741;
+    --danger: #b83a2e; --danger-soft: #f7dfdb; --select: #2b5f93; --ember: #c4622d;
+    --bg: #fcfbf7; --surface: #ffffff; --line: #e4ddcd; --text: #2a2925; --muted: #6d685d;
+    --locked: #e7e1d3; --locked-dark: #cdc4b0; --ayah-bg: #fbf5e6; --ayah-line: #e2d09c;
+    --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 4l4.7 11.3L36 20l-11.3 4.7L20 36l-4.7-11.3L4 20l11.3-4.7z' fill='none' stroke='white' stroke-opacity='.16' stroke-width='1.2'/%3E%3Crect x='14' y='14' width='12' height='12' transform='rotate(45 20 20)' fill='none' stroke='white' stroke-opacity='.12'/%3E%3C/svg%3E");
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #d9d4c7; }
+  body { font-family: "Tajawal", sans-serif; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page {
+    width: 210mm; height: 297mm; overflow: hidden; position: relative; background: var(--bg);
+    padding: 20mm 18mm 16mm; page-break-after: always; break-after: page; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 7mm;
+  }
+  .page:last-child { page-break-after: auto; }
+  .page > * { flex-shrink: 0; }
+  .folio { position: absolute; bottom: 9mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; font-size: 9pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 3mm; }
+  .eyebrow { font-size: 9.5pt; letter-spacing: .02em; color: var(--gold-dark); font-weight: 800; }
+  h1, h2, h3 { font-family: "Reem Kufi", sans-serif; font-weight: 700; margin: 0; color: var(--primary-dark); }
+  h1 { font-size: 30pt; line-height: 1.15; }
+  h2 { font-size: 22pt; }
+  h3 { font-size: 13pt; margin-bottom: 2mm; }
+  p { margin: 0; line-height: 1.85; font-size: 11pt; }
+  .lead { font-size: 12.5pt; line-height: 1.9; max-width: 150mm; }
+  .muted { color: var(--muted); }
+  .ic { width: 1em; height: 1em; vertical-align: -0.16em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .grid6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3mm; }
+  .grid6 .sw .chip { height: 16mm; }
+  .grid6 .sw .info { font-size: 8.3pt; padding: 2mm 2.5mm; }
+  .grid6 .sw b { font-size: 9.5pt; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 4mm; padding: 5mm; }
+  .rule { height: 1px; background: var(--line); }
+
+  /* الغلاف */
+  .cover { background: var(--primary); background-image: var(--pattern); background-size: 52px 52px; color: #fff; justify-content: space-between; padding: 26mm 20mm; }
+  .cover h1 { color: #fff; font-size: 40pt; }
+  .cover .eyebrow { color: var(--gold); font-size: 11pt; }
+  .cover .logo { width: 62mm; height: 62mm; border-radius: 14mm; box-shadow: 0 0 0 2.5mm rgba(201,162,39,.35); }
+  .cover .bottom { border-top: 1px solid rgba(255,255,255,.3); padding-top: 6mm; display: flex; justify-content: space-between; font-size: 10.5pt; color: rgba(255,255,255,.85); }
+
+  /* الشعار */
+  .lockup { display: flex; align-items: center; gap: 6mm; }
+  .lockup img { width: 22mm; height: 22mm; border-radius: 5mm; }
+  .wordmark { font-family: "Reem Kufi", sans-serif; font-weight: 700; font-size: 26pt; color: var(--primary); }
+  .wordmark .m { font-family: "Amiri", serif; color: var(--gold); }
+  .tile { border-radius: 4mm; padding: 6mm 4mm; display: grid; place-items: center; min-height: 30mm; }
+  .tile .wordmark { font-size: 14pt; white-space: nowrap; }
+  .tile.dark { background: var(--primary); background-image: var(--pattern); background-size: 40px 40px; }
+  .tile.dark .wordmark { color: #fff; }
+  .tile.ivory { background: var(--bg); border: 1px solid var(--line); }
+  .tile.mono { background: #fff; border: 1px solid var(--line); }
+  .tile.mono .wordmark, .tile.mono .wordmark .m { color: #1a1a1a; }
+  .tile small { margin-top: 3mm; display: block; text-align: center; color: var(--muted); font-size: 9pt; }
+  .tile.dark small { color: rgba(255,255,255,.75); }
+  .space { position: relative; padding: 10mm; border: 1px dashed var(--gold); border-radius: 3mm; display: inline-flex; }
+  .dont { position: relative; }
+  .dont::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top left, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px)); border-radius: 4mm; }
+
+  /* الألوان */
+  .sw { border-radius: 4mm; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+  .sw .chip { height: 13mm; }
+  .sw .info { padding: 2mm 3.5mm; font-size: 9pt; line-height: 1.5; }
+  .sw b { display: block; font-size: 11pt; }
+  .ratio { display: flex; height: 12mm; border-radius: 3mm; overflow: hidden; font-size: 9pt; font-weight: 800; }
+  .ratio div { display: grid; place-items: center; }
+  .topics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.8mm 6mm; }
+  .topic { display: flex; align-items: center; gap: 3mm; font-size: 10pt; }
+  .topic i { width: 7.5mm; height: 7.5mm; border-radius: 2.4mm; display: grid; place-items: center; color: #fff; font-size: 15pt; font-style: normal; flex: none; }
+  .topic code { margin-inline-start: auto; font-size: 8.5pt; color: var(--muted); direction: ltr; }
+
+  /* الخطوط */
+  .spec { display: grid; grid-template-columns: 38mm 1fr; gap: 5mm; align-items: center; padding: 5mm 0; border-bottom: 1px solid var(--line); }
+  .spec .name { font-size: 9.5pt; color: var(--muted); line-height: 1.6; }
+  .spec .name b { display: block; color: var(--text); font-size: 11pt; }
+  .scale div { display: flex; align-items: baseline; gap: 6mm; padding: 1.6mm 0; }
+  .scale code { width: 28mm; font-size: 8.5pt; color: var(--muted); direction: ltr; text-align: left; }
+
+  /* الأيقونات */
+  .icons { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3mm; }
+  .icons div { background: var(--surface); border: 1px solid var(--line); border-radius: 3mm; padding: 4mm 1mm 3mm; text-align: center; font-size: 8pt; color: var(--muted); }
+  .icons .ic { font-size: 20pt; color: var(--primary-dark); display: block; margin: 0 auto 2mm; }
+  .gridbox { width: 44mm; height: 44mm; background-color: #fff; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: calc(44mm/24) calc(44mm/24); border: 1px solid var(--locked-dark); display: grid; place-items: center; color: var(--primary); }
+  .gridbox .ic { width: 44mm; height: 44mm; }
+
+  /* العناصر */
+  .nodes { display: flex; gap: 7mm; align-items: flex-end; justify-content: space-around; }
+  .nodes figure { margin: 0; text-align: center; font-size: 9pt; color: var(--muted); }
+  .node { width: 17mm; height: 17mm; border-radius: 30%; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18pt; margin: 0 auto 3mm;
+          background: var(--primary); box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 1.4mm 0 var(--primary-dark); }
+  .node.done { background: var(--gold); color: var(--gold-ink); box-shadow: inset 0 0 0 2px rgba(255,255,255,.25), 0 1.4mm 0 var(--gold-dark); }
+  .node.test { width: 20mm; height: 20mm; background: var(--navy); box-shadow: inset 0 0 0 2px var(--gold), 0 1.4mm 0 var(--navy-dark); }
+  .node.locked { background: var(--locked); color: var(--muted); box-shadow: 0 1.4mm 0 var(--locked-dark); font-size: 14pt; }
+  .star8 { width: 25mm; height: 25mm; margin: 0 auto 3mm; display: grid; place-items: center; color: var(--gold-ink); font-size: 22pt; position: relative; filter: drop-shadow(0 1.2mm 0 var(--gold-dark)); isolation: isolate; }
+  .star8::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--gold); clip-path: polygon(50.0% 0.0%, 64.9% 14.0%, 85.4% 14.6%, 86.0% 35.1%, 100.0% 50.0%, 86.0% 64.9%, 85.4% 85.4%, 64.9% 86.0%, 50.0% 100.0%, 35.1% 86.0%, 14.6% 85.4%, 14.0% 64.9%, 0.0% 50.0%, 14.0% 35.1%, 14.6% 14.6%, 35.1% 14.0%); }
+  .btns { display: flex; gap: 4mm; flex-wrap: wrap; }
+  .btn { border-radius: 3mm; padding: 3.4mm 7mm; font-weight: 800; font-size: 11pt; }
+  .btn.p { background: var(--primary); color: #fff; box-shadow: 0 .9mm 0 var(--primary-dark); }
+  .btn.g { background: var(--gold); color: var(--gold-ink); box-shadow: 0 .9mm 0 var(--gold-dark); }
+  .btn.o { border: 1.5px solid var(--line); color: var(--primary); box-shadow: 0 .8mm 0 var(--line); }
+  .ayah { position: relative; border: 1px solid var(--ayah-line); border-radius: 1.6mm; background: var(--ayah-bg); text-align: center; padding: 6mm 8mm 4mm;
+          box-shadow: inset 0 0 0 1.2mm var(--ayah-bg), inset 0 0 0 1.5mm var(--ayah-line); }
+  .ayah .t { font-family: "Amiri", serif; font-size: 20pt; line-height: 2; color: #2d2a1f; }
+  .ayah .r { font-size: 9pt; color: var(--muted); }
+  .ayah .c { position: absolute; width: 4mm; height: 4mm; color: var(--gold); }
+  .banner { border-radius: 3.5mm; padding: 5mm 6mm; color: #fff; background: var(--primary); background-image: var(--pattern); background-size: 40px 40px; border-bottom: 1mm solid var(--gold); display: flex; justify-content: space-between; align-items: center; }
+  .banner b { font-family: "Reem Kufi", sans-serif; font-size: 15pt; display: block; }
+  .banner small { opacity: .9; font-size: 9pt; }
+  .banner span { background: rgba(255,255,255,.22); border-radius: 2.5mm; padding: 1.5mm 3mm; font-weight: 800; }
+  .chip2 { display: inline-flex; align-items: center; gap: 1.6mm; color: #fff; border-radius: 99px; padding: 1.2mm 3.6mm; font-weight: 800; font-size: 9.5pt; }
+
+  /* النبرة */
+  .voice { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .voice .yes, .voice .no { border-radius: 3mm; padding: 4mm 5mm; font-size: 10.5pt; line-height: 1.8; }
+  .voice .yes { background: var(--primary-soft); border-inline-start: 1.4mm solid var(--primary); }
+  .voice .no { background: var(--danger-soft); border-inline-start: 1.4mm solid var(--danger); }
+  .voice h4 { margin: 0 0 1mm; font-size: 10pt; }
+  ul.tight { margin: 0; padding-inline-start: 5mm; line-height: 1.9; font-size: 10.5pt; }
+
+  /* لقطات */
+  .shots { display: flex; gap: 5mm; justify-content: center; align-items: flex-start; }
+  .shot { width: 43mm; border-radius: 5mm; overflow: hidden; border: 1.1mm solid #1a1a1a; box-shadow: 0 3mm 8mm rgba(0,0,0,.18); }
+  .shot img { display: block; width: 100%; }
+  .caption { text-align: center; font-size: 9pt; color: var(--muted); margin-top: 2mm; }
+</style>
+</head>
+<body>
+
+<!-- ============ ١. الغلاف ============ -->
+<section class="page cover">
+  <div>
+    <div class="eyebrow">دليل الهوية البصرية — الإصدار ١٫٠</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:9mm;align-items:flex-start">
+    <img class="logo" src="../icons/icon-512.png" alt="">
+    <h1>مسابقات قرآنية</h1>
+    <p class="lead" style="color:rgba(255,255,255,.9)">رحلة في معاني القرآن الكريم، جزءًا جزءًا، من جزء عمّ إلى الفاتحة. هذا الدليل يجمع قواعد الشعار والألوان والخطوط والأيقونات والعناصر ونبرة الكتابة، ليبقى التطبيق وكل ما يصدر عنه متّسقًا.</p>
+  </div>
+  <div class="bottom"><span>للفريق والمصمّمين والمطوّرين</span><span>٢٠٢٦</span></div>
+</section>
+
+<!-- ============ ٢. الفكرة ============ -->
+<section class="page">
+  <div class="eyebrow">٠١ — الفكرة</div>
+  <h2>هوية من عالم المصحف</h2>
+  <p class="lead">كل عنصر في الهوية مأخوذ من أدوات المصحف المطبوع وزخارفه، لا من قوالب التطبيقات الجاهزة: خضرة أغلفة المصاحف، وذهب الإطارات والفواصل، وكحلي الحبر، والنجمة الثمانية التي تعلّم أحزاب القرآن.</p>
+  <div class="grid2">
+    <div class="card"><h3>الزمرد والذهب</h3><p>الأخضر الزمردي لونُ الطريق والتقدّم، والذهبي لونُ ما أُنجز وأُتقن. معًا يحاكيان غلاف المصحف وتذهيبه.</p></div>
+    <div class="card"><h3>النجمة الثمانية ۞</h3><p>علامة الحزب في المصحف، وهي في التطبيق رمز «الجولة الختامية» التي تختم كل وحدة، ونجمة التقييم، وزخرفة زوايا إطار الآية.</p></div>
+    <div class="card"><h3>البلاطة لا الدائرة</h3><p>مراحل المسار بلاطات مربعة الزوايا اللينة، كقطع الفسيفساء في المساجد، تتراصّ في طريق متعرّج نحو الختام.</p></div>
+    <div class="card"><h3>الإطار المزدوج</h3><p>الآية تُعرض دائمًا داخل إطار مزدوج بخط ذهبي ونجوم في الزوايا، على هيئة إطارات صفحات المصحف.</p></div>
+  </div>
+  <div class="rule"></div>
+  <h3>الشخصية</h3>
+  <div class="grid3">
+    <div class="card"><b>وقور</b><p class="muted">يحترم جلال النص، بلا صخب ولا رموز تعبيرية.</p></div>
+    <div class="card"><b>مشجّع</b><p class="muted">يحتفي بالتقدّم ويخفّف الخطأ: «لا بأس، المراجعة طريق الإتقان».</p></div>
+    <div class="card"><b>دقيق</b><p class="muted">يذكر المصدر بعد كل معلومة، ويميّز الموثّق من المرجع العام.</p></div>
+  </div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٢</span></div>
+</section>
+
+<!-- ============ ٣. الشعار ============ -->
+<section class="page">
+  <div class="eyebrow">٠٢ — الشعار</div>
+  <h2>العلامة والكلمة</h2>
+  <p>العلامة: مصحف مفتوح داخل نجمة ثمانية ذهبية على مربّع زمردي. الكلمة: «مسابقات قرآنية» بخط ريم الكوفي، بين قوسَي الآية ﴿ ﴾ بالذهبي.</p>
+  <div class="card" style="display:flex;justify-content:center;padding:7mm">
+    <div class="lockup"><img src="../icons/icon-512.png" alt=""><span class="wordmark"><span class="m">﴿</span>مسابقات قرآنية<span class="m">﴾</span></span></div>
+  </div>
+  <div class="grid3">
+    <div class="tile dark"><div><div class="wordmark"><span class="m">﴿</span>مسابقات قرآنية<span class="m">﴾</span></div><small>على الزمردي بالنقش</small></div></div>
+    <div class="tile ivory"><div><div class="wordmark"><span class="m">﴿</span>مسابقات قرآنية<span class="m">﴾</span></div><small>على العاجي (الأساس)</small></div></div>
+    <div class="tile mono"><div><div class="wordmark"><span class="m">﴿</span>مسابقات قرآنية<span class="m">﴾</span></div><small>أحادي اللون للطباعة</small></div></div>
+  </div>
+  <div class="grid2" style="align-items:center">
+    <div>
+      <h3>المساحة الآمنة والحد الأدنى</h3>
+      <ul class="tight">
+        <li>اترك حول العلامة فراغًا لا يقل عن نصف عرضها.</li>
+        <li>لا تقل العلامة عن ٢٤ بكسل على الشاشة أو ٨ ملم في الطباعة.</li>
+        <li>زوايا مربع العلامة ٢٢٪ من عرضه؛ والمتجران يقصّانها تلقائيًا.</li>
+      </ul>
+    </div>
+    <div style="display:flex;justify-content:center"><div class="space"><img src="../icons/icon-512.png" style="width:26mm;border-radius:6mm" alt=""></div></div>
+  </div>
+  <h3>ما لا يجوز</h3>
+  <div class="grid3">
+    <div class="tile ivory dont"><div class="wordmark" style="transform:scaleX(1.5)">مسابقات</div></div>
+    <div class="tile ivory dont"><div class="wordmark" style="color:#e05297">مسابقات قرآنية</div></div>
+    <div class="tile ivory dont"><div class="wordmark" style="text-shadow:0 2mm 3mm rgba(0,0,0,.4)">مسابقات قرآنية</div></div>
+  </div>
+  <p class="muted" style="font-size:10pt">لا تمطّ العلامة ولا تغيّر ألوانها ولا تضف إليها ظلالًا أو تدرّجات أو رموزًا تعبيرية.</p>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٣</span></div>
+</section>
+
+<!-- ============ ٤. الألوان ============ -->
+<section class="page">
+  <div class="eyebrow">٠٣ — الألوان</div>
+  <h2>لوحة المصحف</h2>
+  <div class="grid6" id="core"></div>
+  <h3>النسب</h3>
+  <div class="ratio">
+    <div style="flex:60;background:var(--bg);border:1px solid var(--line);color:var(--muted)">العاجي ٦٠٪</div>
+    <div style="flex:28;background:var(--primary);color:#fff">الزمردي ٢٨٪</div>
+    <div style="flex:8;background:var(--gold);color:var(--gold-ink)">الذهبي ٨٪</div>
+    <div style="flex:4;background:var(--navy);color:#fff">٤٪</div>
+  </div>
+  <h3>ألوان الحالة</h3>
+  <div class="grid6" id="semantic"></div>
+  <h3>ألوان المحاور الثلاثة عشر</h3>
+  <div class="topics" id="topics"></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٤</span></div>
+</section>
+
+<!-- ============ ٥. الخطوط ============ -->
+<section class="page">
+  <div class="eyebrow">٠٤ — الخطوط</div>
+  <h2>ثلاثة خطوط، لكلٍّ دوره</h2>
+  <div>
+    <div class="spec"><div class="name"><b>ريم الكوفي</b>Reem Kufi — للعناوين والعلامة</div><div style="font-family:'Reem Kufi';font-weight:700;font-size:30pt;color:var(--primary-dark)">الوحدة الأولى</div></div>
+    <div class="spec"><div class="name"><b>تجوَّل</b>Tajawal — للواجهة والأسئلة والشروح</div><div style="font-size:15pt;font-weight:800">ما معنى «الرَّين» في الآية؟ <span style="font-weight:400;font-size:12pt;color:var(--muted)">قال ابن كثير: ما غطّى القلوب من كثرة الذنوب.</span></div></div>
+    <div class="spec"><div class="name"><b>أميري</b>Amiri — لنص القرآن وحده</div><div style="font-family:'Amiri';font-size:24pt;color:#2d2a1f">﴿كَلَّا بَلْ رَانَ عَلَىٰ قُلُوبِهِم﴾</div></div>
+  </div>
+  <h3>سلّم الأحجام</h3>
+  <div class="scale card">
+    <div><code>Reem Kufi 30/700</code><span style="font-family:'Reem Kufi';font-size:22pt;font-weight:700">عنوان الشاشة</span></div>
+    <div><code>Reem Kufi 21/700</code><span style="font-family:'Reem Kufi';font-size:16pt;font-weight:700">عنوان الوحدة</span></div>
+    <div><code>Tajawal 21/800</code><span style="font-size:15pt;font-weight:800">نص السؤال</span></div>
+    <div><code>Tajawal 16/600</code><span style="font-size:12pt;font-weight:600">الخيارات والأزرار</span></div>
+    <div><code>Tajawal 15/400</code><span style="font-size:11pt">الشرح بعد الإجابة</span></div>
+    <div><code>Tajawal 13/400</code><span style="font-size:10pt;color:var(--muted)">المصدر والتسميات الصغيرة</span></div>
+    <div><code>Amiri 25/400</code><span style="font-family:'Amiri';font-size:17pt">نص الآية</span></div>
+  </div>
+  <ul class="tight">
+    <li>الأرقام بالهندية العربية (١٢٣) في كل الواجهة.</li>
+    <li>لا يُكتب نص القرآن إلا بخط أميري، ولا يُكتب به غيره.</li>
+    <li>الكوفي للعناوين القصيرة فقط؛ لا تكتب به فقرات ولا أسئلة.</li>
+  </ul>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٥</span></div>
+</section>
+
+<!-- ============ ٦. الأيقونات ============ -->
+<section class="page">
+  <div class="eyebrow">٠٥ — الأيقونات</div>
+  <h2>مجموعة مرسومة للتطبيق</h2>
+  <div class="grid2" style="grid-template-columns:auto 1fr;align-items:center">
+    <div class="gridbox" id="gridbox"></div>
+    <ul class="tight">
+      <li>شبكة ٢٤ × ٢٤، وخط بسماكة ١٫٨، وأطراف وزوايا مستديرة.</li>
+      <li>تُرسم بلون النص؛ والمملوء منها للحالات فقط: القلب، والنجمة، واللهب.</li>
+      <li>كل محور له أيقونة من عالمه: المشكاة للتفسير، والكعبة للمكي والمدني، والميزان للأحكام، والجذور للأصول.</li>
+      <li><b>لا رموز تعبيرية (Emoji) في الواجهة إطلاقًا.</b></li>
+    </ul>
+  </div>
+  <h3>الواجهة</h3>
+  <div class="icons" id="ui-icons"></div>
+  <h3>المحاور</h3>
+  <div class="icons" id="topic-icons"></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٦</span></div>
+</section>
+
+<!-- ============ ٧. العناصر ============ -->
+<section class="page">
+  <div class="eyebrow">٠٦ — العناصر</div>
+  <h2>مكوّنات الواجهة</h2>
+  <h3>عُقد المسار</h3>
+  <div class="card nodes">
+    <figure><div class="node">٣</div>درس متاح</figure>
+    <figure><div class="node done">٢</div>درس مُتقَن</figure>
+    <figure><div class="node test" id="n-test"></div>اختبار الجزء</figure>
+    <figure><div class="star8" id="n-star"></div>الجولة الختامية</figure>
+    <figure><div class="node locked" id="n-lock"></div>مقفل</figure>
+  </div>
+  <h3>لافتة الجزء</h3>
+  <div class="banner"><div><small>الجزء ٣٠</small><b>جزء عمّ</b><small>من النبأ إلى الناس</small></div><span>٣/٧</span></div>
+  <h3>إطار الآية</h3>
+  <div class="ayah" id="ayah"><div class="t">﴿وَاشْتَعَلَ الرَّأْسُ شَيْبًا﴾</div><div class="r">[مريم: ٤]</div></div>
+  <div class="grid2">
+    <div><h3>الأزرار</h3><div class="btns"><span class="btn p">تحقّق</span><span class="btn g">اشترك الآن</span><span class="btn o">لاحقًا</span></div></div>
+    <div><h3>شارات المحاور</h3><div class="btns" id="chips"></div></div>
+  </div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٧</span></div>
+</section>
+
+<!-- ============ ٨. النبرة ============ -->
+<section class="page">
+  <div class="eyebrow">٠٧ — نبرة الكتابة</div>
+  <h2>كيف يتكلم التطبيق</h2>
+  <p class="lead">بعربية فصيحة سهلة، كمعلّم قريب: يشجّع ولا يبالغ، ويوضّح ولا يطيل، ويذكر مصدره.</p>
+  <div class="voice">
+    <div class="yes"><h4>نعم</h4>«أحسنت!» — «بارك الله فيك!»</div>
+    <div class="no"><h4>لا</h4>«واو!! 🔥🔥 أنت أسطورة!!»</div>
+    <div class="yes"><h4>نعم</h4>«لا بأس، المراجعة طريق الإتقان. تمتلئ قلوبك بعد ٠٤:٥٩:٥٩.»</div>
+    <div class="no"><h4>لا</h4>«خسرت! انتظر أو ادفع الآن.»</div>
+    <div class="yes"><h4>نعم</h4>«المصدر: تفسير ابن كثير ٧/ ٥١١ — موثّق من المكتبة الشاملة.»</div>
+    <div class="no"><h4>لا</h4>شرح بلا مصدر، أو نسبة نصٍّ إلى كتاب لم يُرجع إليه.</div>
+  </div>
+  <h3>قواعد ثابتة</h3>
+  <ul class="tight">
+    <li>«ﷺ» بعد ذكر النبي، و«رضي الله عنه/عنها» بعد الصحابة، و«عليه السلام» بعد الأنبياء.</li>
+    <li>الآيات بين ﴿ ﴾ ومعها السورة ورقم الآية، والأقوال بين « ».</li>
+    <li>ما فيه خلاف يُنسب: «قيل»، «ذكر المفسرون»، «رُوي»؛ ولا يُقدَّم الضعيف على أنه ثابت.</li>
+    <li>الاشتراك عرضٌ لمن يرغب، لا ضغط؛ ولا يُقفل العلم خلف الدفع.</li>
+  </ul>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٨</span></div>
+</section>
+
+<!-- ============ ٩. التطبيق ============ -->
+<section class="page">
+  <div class="eyebrow">٠٨ — الهوية في التطبيق</div>
+  <h2>الوضع الفاتح والداكن</h2>
+  <div class="shots">
+    <div><div class="shot"><img src="img/home-light.png" alt=""></div><div class="caption">المسار</div></div>
+    <div><div class="shot"><img src="img/lesson-light.png" alt=""></div><div class="caption">السؤال</div></div>
+    <div><div class="shot"><img src="img/feedback-light.png" alt=""></div><div class="caption">الشرح والمصدر</div></div>
+  </div>
+  <div class="shots">
+    <div><div class="shot"><img src="img/home-dark.png" alt=""></div><div class="caption">المسار — داكن</div></div>
+    <div><div class="shot"><img src="img/lesson-dark.png" alt=""></div><div class="caption">السؤال — داكن</div></div>
+    <div><div class="shot"><img src="img/feedback-dark.png" alt=""></div><div class="caption">الشرح — داكن</div></div>
+  </div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٩</span></div>
+</section>
+
+<script src="../js/icons.js"></script>
+<script src="../js/data.js"></script>
+<script>
+  const sw = (name, hex, use, ink) => `<div class="sw"><div class="chip" style="background:${hex}"></div><div class="info"><b>${name}</b><span style="direction:ltr;display:inline-block">${hex.toUpperCase()}</span><br>${use}</div></div>`;
+  document.getElementById("core").innerHTML = [
+    sw("زمردي", "#1f7a5c", "اللون الرئيس: الأزرار والدروس المتاحة واللافتات"),
+    sw("ذهبي المخطوطات", "#c9a227", "الإنجاز والتقييم والزخارف"),
+    sw("كحلي الحبر", "#1e3a5f", "اختبار الجزء والعناصر المميّزة"),
+    sw("عاجي", "#fcfbf7", "الخلفية"),
+    sw("حبر النص", "#2a2925", "النصوص"),
+    sw("رقّ الآية", "#fbf5e6", "خلفية إطار الآية"),
+  ].join("");
+  document.getElementById("semantic").innerHTML = [
+    sw("قرمزي", "#b83a2e", "الخطأ والقلوب"),
+    sw("أزرق الاختيار", "#2b5f93", "الخيار المحدَّد"),
+    sw("جمري", "#c4622d", "السلسلة اليومية"),
+  ].join("");
+  document.getElementById("topics").innerHTML = Object.values(CATEGORIES).map((c) =>
+    `<div class="topic"><i style="background:${c.color}">${ic(c.icon)}</i>${c.name}<code>${c.color.toUpperCase()}</code></div>`).join("");
+  const ui = [["heart","القلوب",1],["flame","السلسلة",1],["drop","النقاط"],["star","التقييم",1],["rub","الجولة الختامية"],["trophy","اختبار الجزء"],["lock","مقفل"],["path","المسار"],["review","المراجعة"],["stats","الإحصاءات"],["seal","موثّق"],["gem","بلس"]];
+  document.getElementById("ui-icons").innerHTML = ui.map(([k, n, f]) => `<div>${ic(k, "", !!f)}${n}</div>`).join("");
+  document.getElementById("topic-icons").innerHTML = Object.values(CATEGORIES).map((c) => `<div>${ic(c.icon)}${c.name}</div>`).join("");
+  document.getElementById("gridbox").innerHTML = ic("lantern");
+  document.getElementById("n-test").innerHTML = ic("trophy");
+  document.getElementById("n-star").innerHTML = ic("rub");
+  document.getElementById("n-lock").innerHTML = ic("lock");
+  document.getElementById("chips").innerHTML = ["tafsir", "qiraat", "ahkam"].map((k) => `<span class="chip2" style="background:${CATEGORIES[k].color}">${ic(CATEGORIES[k].icon)}${CATEGORIES[k].name}</span>`).join("");
+  const a = document.getElementById("ayah");
+  [["top","right"],["top","left"],["bottom","right"],["bottom","left"]].forEach(([v,h]) => a.insertAdjacentHTML("beforeend", `<span class="c" style="${v}:1mm;${h}:1mm">${ic("star","",true)}</span>`));
+</script>
+</body>
+</html>
