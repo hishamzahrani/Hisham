@@ -54,9 +54,13 @@ ws.row_dimensions[1].height = 30
 
 ayah_font = Font(name="Traditional Arabic", size=14)
 body_font = Font(name="Arial", size=11)
+# حالات المراجعة السابقة (تُحفظ في review/statuses.json حتى لا تضيع عند إعادة توليد الملف)
+import os as _os
+_ST = json.load(open("review/statuses.json", encoding="utf-8")) if _os.path.exists("review/statuses.json") else {}
 for ri, r in enumerate(rows, 2):
     for ci, (_, key, _) in enumerate(cols, 1):
-        val = r[key] if key else ("لم يُراجع" if ci == 14 else "")
+        prev = _ST.get(r["id"], ["لم يُراجع", ""])
+        val = r[key] if key else (prev[0] if ci == 14 else prev[1])
         c = ws.cell(row=ri, column=ci, value=val)
         c.font = ayah_font if key == "ayah" else body_font
         c.alignment = Alignment(horizontal="right", vertical="top", wrap_text=True)

@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import vm from "node:vm";
 
-const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/cite-iq.js", "js/balance.js"];
+const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/cite-iq.js", "js/removed.js", "js/balance.js"];
 const code = files.map((f) => readFileSync(f, "utf8")).join("\n") +
   "\n;this.__out = { STAGES, CATEGORIES, sourceOf };";
 const ctx = {};
@@ -14,7 +14,7 @@ const MIN_LESSONS = 6, LESSON_SIZE = 10; // مطابق لـ app.js
 
 const rows = [];
 for (const st of STAGES) {
-  const items = st.questions.map((q, i) => ({ q, i }));
+  const items = st.questions.map((q, i) => ({ q, i })).filter((it) => !it.q.off); // المحذوف لا يُصدَّر
   // نفس توزيع الدروس في التطبيق
   const ordered = CAT_ORDER.flatMap((c) => items.filter((it) => it.q.c === c));
   const L = Math.max(MIN_LESSONS, Math.ceil(items.length / LESSON_SIZE));

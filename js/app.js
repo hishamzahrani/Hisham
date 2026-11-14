@@ -19,7 +19,7 @@
   const AR_DIG = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
   const lessonsOf = (j) => {
     const st = STAGES.find((x) => x.juz === +j);
-    return Math.max(MIN_LESSONS, Math.ceil((st ? st.questions.length : 0) / LESSON_SIZE));
+    return Math.max(MIN_LESSONS, Math.ceil((st ? st.questions.filter((q) => !q.off).length : 0) / LESSON_SIZE));
   };
   const subCount = (j) => lessonsOf(j) + 1;
   const subsCache = {};
@@ -193,9 +193,9 @@
   const qById = (id) => {
     const [j, i] = id.split(":").map(Number);
     const s = stageByJuz(j);
-    return s && s.questions[i] ? { id, juz: j, q: s.questions[i] } : null;
+    return s && s.questions[i] && !s.questions[i].off ? { id, juz: j, q: s.questions[i] } : null;
   };
-  const juzItems = (j) => stageByJuz(j).questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q }));
+  const juzItems = (j) => stageByJuz(j).questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q })).filter((it) => !it.q.off);
 
   /** توزيع أسئلة الجزء على الدروس الستة توزيعًا ثابتًا متنوّع المحاور */
   const lessonCache = {};
@@ -753,7 +753,7 @@
     const items = [];
     STAGES.forEach((s) => {
       if (!isSubUnlocked(s.juz, 1)) return;
-      s.questions.forEach((q, i) => { if (q.c === cat) items.push({ id: `${s.juz}:${i}`, juz: s.juz, q }); });
+      s.questions.forEach((q, i) => { if (q.c === cat && !q.off) items.push({ id: `${s.juz}:${i}`, juz: s.juz, q }); });
     });
     if (!items.length) { toast("افتح مراحل أكثر لتتدرّب على هذا المحور"); return; }
     startLesson("skill", shuffle(items).slice(0, 8), { cat });
