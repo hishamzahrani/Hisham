@@ -61,7 +61,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; }
+html, body { margin: 0; height: 100%; direction: rtl; }
 body {
   background: var(--bg);
   color: var(--text);
