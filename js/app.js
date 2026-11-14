@@ -166,6 +166,10 @@
   }
   function leakOf(q) {
     if (q.t === "match" || q.t === "tf" || !q.o || !(q.a || q.r)) return null;
+    // السؤال الذي موضوعه الآية نفسها (ما معنى الآيتين؟ ما الذي تقرره الآية؟) لا تُخفى فيه الآية
+    if (/(الآي|آيت|آيات|الاي)(ة|ه|تين|تان|ات)|هذه|هذا|المستفاد|ما معنى|ما المراد|ما الهداية/.test(q.q || "")) return null;
+    // وكذا ما لا يُفهم السؤال إلا بالآية: القراءات والمتشابه والأصول والهدايات والبلاغة
+    if (["qiraat", "mutashabih", "usul", "fawaid", "balagha"].includes(q.c)) return null;
     const ctx = wordsAr((q.a || "") + " " + String(q.r || "").replace(/[\d:\-–\s]+$/, ""));
     const asked = wordsAr(q.q);
     const hits = (o) => [...wordsAr(o)].filter((w) => ctx.has(w) && !asked.has(w));
