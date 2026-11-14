@@ -1,0 +1,12 @@
+{
+  "appId": "ae.rijalquest.app",
+  "appName": "مسابقات رجال الحديث",
+  "webDir": "www",
+  "backgroundColor": "#fcfbf7",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never"
+  }
+}

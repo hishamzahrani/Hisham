@@ -1,0 +1,1221 @@
+(() => {
+  // التطبيق عربي دائمًا: يُضبط الاتجاه حتى لو عُرض داخل صفحة مضيفة اتجاهها يسار-يمين
+  document.documentElement.dir = "rtl";
+  document.documentElement.lang = "ar";
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // الإعدادات
+  // ------------------------------------------------------------------
+  const STORE_KEY = "rijal-quest-v1";
+  const APP_NAME = (typeof APP_INFO !== "undefined" && APP_INFO.name) || "مسابقات رجال الحديث";
+  const DAILY_GOAL = 30;
+  const MIN_LESSONS = 6;    // أقل عدد من الدروس في الجزء
+  const LESSON_SIZE = 10;   // الحدّ الأعلى لأسئلة الدرس الواحد تقريبًا
+  const TEST_SIZE = 8;      // أسئلة اختبار الجزء
+  const UNIT_SIZE = 15;     // أسئلة الجولة الختامية للوحدة
+  const CAT_ORDER = Object.keys(CATEGORIES);
+
+  // المراحل الفرعية لكل جزء: دروس متنوعة (عددها بحسب أسئلة الجزء، ٦ على الأقل) + اختبار الجزء
+  const AR_DIG = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+  const lessonsOf = (j) => {
+    const st = STAGES.find((x) => x.juz === +j);
+    return Math.max(MIN_LESSONS, Math.ceil((st ? st.questions.length : 0) / LESSON_SIZE));
+  };
+  const subCount = (j) => lessonsOf(j) + 1;
+  const subsCache = {};
+  const subsOf = (j) => subsCache[j] || (subsCache[j] = Array.from({ length: lessonsOf(j) }, (_, i) => ({ k: i + 1, short: `الدرس ${AR_DIG(i + 1)}` }))
+    .concat([{ k: lessonsOf(j) + 1, short: "اختبار الطبقة", test: true }]));
+
+  // الوحدات: كل وحدة خمسة أجزاء، تُختم بجولة ختامية
+  const UNIT_NAMES = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة", "التاسعة", "العاشرة", "الحادية عشرة", "الثانية عشرة"];
+  const UNIT_COLORS = ["#1f7a5c", "#1e3a5f", "#23757a", "#7d5a2c", "#5b4a8a", "#2b5f93"];   // زمردي، كحلي، فيروزي، برونزي، بنفسجي داكن، أزرق
+  // المراحل مرقّمة تنازليًّا من TOP إلى ١ (كالأجزاء)، وكل وحدة UNIT_SPAN مراحل
+  const TOP = Math.max(...STAGES.map((s) => s.juz));
+  const UNIT_SPAN = (typeof APP_INFO !== "undefined" && APP_INFO.unitSpan) || 3;
+  const UNITS = Array.from({ length: Math.ceil(TOP / UNIT_SPAN) }, (_, u) => ({ u, name: `الوحدة ${UNIT_NAMES[u]}`,
+    from: TOP - u * UNIT_SPAN, to: Math.max(1, TOP - u * UNIT_SPAN - UNIT_SPAN + 1), color: UNIT_COLORS[u % UNIT_COLORS.length] }));
+  const unitOf = (j) => Math.floor((TOP - j) / UNIT_SPAN);
+  const isUnitEnd = (j) => UNITS.some((U) => U.to === j);
+  const stName = (j) => { const s = STAGES.find((x) => x.juz === +j); return s ? s.title : ""; };
+
+  // ------------------------------------------------------------------
+  // التخزين
+  // ------------------------------------------------------------------
+  const defaultState = () => ({
+    xp: 0,
+    streak: 0,
+    lastDay: null,
+    daily: { day: null, xp: 0 },
+    progress: {},          // { [juz]: { subs: { [k]: stars } } }
+    units: {},             // { [u]: stars }
+    gates: {},             // { [juz]: true } — اجتاز مراجعة الطبقات السابقة قبل دخول الجزء
+    stats: {},             // { [cat]: { c, t } }
+    mistakes: [],          // ["juz:index", ...]
+    lastPos: {},           // موضع الجواب الصحيح في آخر عرض لكل سؤال
+    sound: true,
+    premium: null,         // { plan, token, until } — يُعتمد عليه فقط بعد تحقق الخادم
+  });
+
+  let state = load();
+
+  function load() {
+    let s = defaultState();
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) s = Object.assign(defaultState(), JSON.parse(raw));
+    } catch (_) { /* التخزين غير متاح */ }
+    Object.keys(s.progress).forEach((j) => {
+      const p = s.progress[j];
+      if (p && !p.subs) {
+        const subs = {};
+        for (let k = 1; k <= subCount(j); k++) subs[k] = p.stars || 1;
+        s.progress[j] = { subs };
+      }
+    });
+    // ترحيل عدد الدروس: يتغير بزيادة أسئلة الجزء، فيُنقل الاختبار المجتاز إلى موضعه الجديد
+    // ويُعدّ ما أُضيف من دروس مجتازًا، حتى لا يُغلق جزء أتمّه المتسابق من قبل.
+    // subsL يحفظ عدد دروس كل جزء عند آخر حفظ؛ والنسخ الأقدم بلا subsL تُقدَّر من الإصدار السابق.
+    const PREV_L_V2 = { 30: 10, 2: 7, 4: 7, 5: 7, 10: 7 };
+    if (!s.subsL) s.subsL = {};
+    Object.keys(s.progress).forEach((j) => {
+      const subs = s.progress[j] && s.progress[j].subs;
+      if (!subs) return;
+      const prev = s.subsL[j] || (s.subsV === 2 ? PREV_L_V2[j] || MIN_LESSONS : MIN_LESSONS);
+      const L = lessonsOf(j);
+      if (prev !== L) {
+        const t = subs[prev + 1];
+        if (L > prev) {
+          if (t) for (let k = prev + 1; k <= L + 1; k++) subs[k] = Math.max(subs[k] || 0, t);
+        } else {
+          Object.keys(subs).forEach((k) => { if (+k > L) delete subs[k]; });
+          if (t) subs[L + 1] = t;
+        }
+      }
+    });
+    s.subsV = 3;
+    if (!s.units) s.units = {};
+    return s;
+  }
+  function save() {
+    STAGES.forEach((st) => { state.subsL[st.juz] = lessonsOf(st.juz); });
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) {}
+  }
+
+  // ------------------------------------------------------------------
+  // أدوات
+  // ------------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, html) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) n.innerHTML = html;
+    return n;
+  };
+  const shuffle = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  // نص الآية بين القوسين المزخرفين: كل قوس ملتصق بالكلمة المجاورة داخل عزلٍ يمين-يسار
+  // حتى لا ينفصل عنها عند التفاف السطر ولا يُعاد ترتيبه في محرّك Safari
+  // تصغير خط الآيات الطويلة قليلًا لتقل أسطرها
+  function ayahSize(a) {
+    const n = String(a).replace(/[\u064B-\u0652\u0670\u06D6-\u06ED]/g, "").length;
+    return n > 70 ? " ayah-xl" : n > 45 ? " ayah-l" : "";
+  }
+  function ayahHtml(a) { return esc(String(a).trim()); }
+
+  // أقواس المصحف المزخرفة تُرسم صورةً (SVG) لا حرفًا، لأن Safari وChrome يرسمان الحرفين U+FD3E/U+FD3F
+  // متعاكسين؛ الرسم ثابت في كل المتصفحات: طرفا القوس نحو الآية والزخرفة خارجها
+  const ORN_SVG = '<svg class="orn" viewBox="0 0 18 40" aria-hidden="true" fill="currentColor"><path d="M2 1C9 7 11.2 13.2 11.2 20S9 33 2 39C5.6 32.6 6.6 26.4 6.6 20S5.6 7.4 2 1z"/><path fill-rule="evenodd" d="M14.6 14.2l2.7 5.8-2.7 5.8-2.7-5.8zM14.6 18.2l.85 1.8-.85 1.8-.85-1.8z"/><circle cx="10.3" cy="10.5" r="1.1"/><circle cx="10.3" cy="29.5" r="1.1"/></svg>';
+  const ORN_OPEN = ORN_SVG.replace('class="orn"', 'class="orn orn-open"');
+  const ORN_CLOSE = ORN_SVG.replace('class="orn"', 'class="orn orn-close"');
+  // عرض الآية؛ إن كانت تفضح الجواب أُخفي نصها (وتبقى الأقواس) حتى يُجاب، وكذا اسم السورة إن دلّ عليه
+  function renderAyah(q, reveal) {
+    const box = $("q-ayah");
+    if (!q.a && !q.r) { box.innerHTML = ""; return; }
+    const leak = reveal ? null : leakOf(q);
+    const refLeak = leak && leak.some((w) => wordsAr(String(q.r || "").replace(/[\d:\-–\s]+$/, "")).has(w));
+    const text = !q.a ? "" : leak
+      ? `<div class="ayah-text ayah-hidden" dir="rtl" title="يظهر النص بعد الإجابة"><span class="ayah-dots">• • •</span></div>`
+      : `<div class="ayah-text${ayahSize(q.a)}" dir="rtl">${ayahHtml(q.a)}</div>`;
+    const ref = !q.r ? "" : refLeak ? `<div class="ayah-ref">[تظهر بعد الإجابة]</div>` : `<div class="ayah-ref">[${esc(q.r)}]</div>`;
+    box.innerHTML = text + ref;
+    if (reveal) box.classList.add("ayah-reveal");
+    else box.classList.remove("ayah-reveal");
+  }
+  // <leak>
+  // كشف الأسئلة التي تفضح فيها الآيةُ أو اسمُ السورة الجوابَ الصحيح:
+  // كلمة في الجواب الصحيح موجودة في الآية/اسم السورة، وليست في نص السؤال، ولا تشترك فيها الخيارات الأخرى بالقدر نفسه
+  const LEAK_STOP = new Set("من في على الى عن الذي التي الذين ما لا لم لن ان او ثم هو هي هم كان كانت قد كل بعد قبل عند اذا اذ هذا هذه ذلك تلك الله سوره ايه ايات القران لله بالله ولله".split(" "));
+  function normAr(t) {
+    return String(t).replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي");
+  }
+  function stemAr(w) {
+    w = w.replace(/^(و|ف)(?=..)/, "").replace(/^(بال|كال|فال|لل|ال|ب|ل|ك)(?=...)/, "");
+    return w.replace(/(ون|ين|ات|ان|ها|هم|هما|كم|نا|ه)$/,(x) => (w.length - x.length >= 3 ? "" : x));
+  }
+  function wordsAr(t) {
+    return new Set(normAr(t).split(/[^\u0621-\u064A]+/).filter((w) => w.length >= 2 && !LEAK_STOP.has(w)).map(stemAr).filter((w) => w.length >= 3 && !LEAK_STOP.has(w)));
+  }
+  function leakOf(q) {
+    if (q.t === "match" || q.t === "tf" || !q.o || !(q.a || q.r)) return null;
+    // السؤال الذي موضوعه الآية نفسها (ما معنى الآيتين؟ ما الذي تقرره الآية؟) لا تُخفى فيه الآية
+    if (/(الآي|آيت|آيات|الاي)(ة|ه|تين|تان|ات)|هذه|هذا|المستفاد|ما معنى|ما المراد|ما الهداية/.test(q.q || "")) return null;
+    // وكذا ما لا يُفهم السؤال إلا بالآية: القراءات والمتشابه والأصول والهدايات والبلاغة
+    if (["qiraat", "mutashabih", "usul", "fawaid", "balagha"].includes(q.c)) return null;
+    const ctx = wordsAr((q.a || "") + " " + String(q.r || "").replace(/[\d:\-–\s]+$/, ""));
+    const asked = wordsAr(q.q);
+    const hits = (o) => [...wordsAr(o)].filter((w) => ctx.has(w) && !asked.has(w));
+    const h0 = hits(q.o[0]);
+    if (!h0.length) return null;
+    const best = Math.max(0, ...q.o.slice(1).map((o) => hits(o).length));
+    return h0.length > best ? h0 : null;
+  }
+  // </leak>
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
+    .replace(/[\uFD3E\uFD3F]/g, (c) => (c === "\uFD3E" ? ORN_OPEN : ORN_CLOSE)); // أقواس الآيات بخط المصحف
+  const toAr = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+  const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  /** نجوم التقييم (نجمة ثمانية)؛ total لعرض الفارغة أيضًا */
+  const starsHtml = (n, total = n) =>
+    Array.from({ length: total }, (_, i) => `<span class="${i < n ? "on" : "off"}">${ic("star", "", true)}</span>`).join("");
+
+  const stageByJuz = (j) => STAGES.find((s) => s.juz === j);
+  const qById = (id) => {
+    const [j, i] = id.split(":").map(Number);
+    const s = stageByJuz(j);
+    return s && s.questions[i] ? { id, juz: j, q: s.questions[i] } : null;
+  };
+  const juzItems = (j) => stageByJuz(j).questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q }));
+
+  /** توزيع أسئلة الجزء على الدروس الستة توزيعًا ثابتًا متنوّع المحاور */
+  const lessonCache = {};
+  function lessonBuckets(j) {
+    if (lessonCache[j]) return lessonCache[j];
+    const all = juzItems(j);
+    const ordered = CAT_ORDER.flatMap((c) => all.filter((it) => it.q.c === c));
+    const n = lessonsOf(j);
+    const buckets = Array.from({ length: n }, () => []);
+    ordered.forEach((it, i) => buckets[i % n].push(it));
+    return (lessonCache[j] = buckets);
+  }
+
+  /** اختيار عيّنة متنوعة المحاور من مجموعة أسئلة */
+  function diverseSample(items, n) {
+    const byCat = {};
+    shuffle(items).forEach((it) => (byCat[it.q.c] = byCat[it.q.c] || []).push(it));
+    const out = [];
+    const cats = shuffle(Object.keys(byCat));
+    while (out.length < n && cats.some((c) => byCat[c].length)) {
+      for (const c of cats) {
+        if (out.length >= n) break;
+        if (byCat[c].length) out.push(byCat[c].pop());
+      }
+    }
+    return out;
+  }
+
+  // ---------- التقدّم ----------
+  const subStars = (j, k) => (state.progress[j] && state.progress[j].subs[k]) || 0;
+  const subDone = (j, k) => subStars(j, k) > 0;
+  const juzDone = (j) => subDone(j, subCount(j));
+  const juzSubsDone = (j) => subsOf(j).filter((s) => subDone(j, s.k)).length;
+  const unitStars = (u) => state.units[u] || 0;
+  const unitDone = (u) => unitStars(u) > 0;
+  const isUnitUnlocked = (u) => juzDone(UNITS[u].to);
+
+  // ---------- الاشتراك ----------
+  const M = typeof MONETIZATION !== "undefined" ? MONETIZATION : { enabled: false };
+  const isPremium = () => !!(M.enabled && state.premium && state.premium.until > Date.now());
+  const NP = window.NativePurchases && window.NativePurchases.isNative ? window.NativePurchases : null;
+  let storePackages = {};   // planId -> RevenueCat package (في التطبيق فقط)
+
+  /** تحويل حالة RevenueCat إلى اشتراك محلي */
+  function applyCustomerInfo(ci) {
+    const ent = ci && ci.entitlements && ci.entitlements.active && ci.entitlements.active[M.store.entitlement];
+    if (ent) {
+      state.premium = { plan: ent.productIdentifier, until: ent.expirationDateMillis || Date.now() + 3650 * 864e5, source: "store" };
+    } else if (state.premium && state.premium.source === "store") {
+      state.premium = null;
+    }
+    save();
+  }
+  async function initStore() {
+    if (!NP || !M.enabled) return;
+    const key = M.store.revenuecatApiKeys[NP.platform];
+    if (!key) return;
+    try {
+      await NP.configure(key);
+      applyCustomerInfo(await NP.customerInfo());
+      NP.onChange((ci) => { applyCustomerInfo(ci); renderHome(); if ($("screen-plus").classList.contains("active")) renderPlus(); });
+      const pkgs = await NP.packages();
+      const ids = M.store.products;
+      Object.keys(ids).forEach((plan) => {
+        const pk = pkgs.find((x) => x.product && x.product.identifier && x.product.identifier.startsWith(ids[plan]));
+        if (pk) storePackages[plan] = pk;
+      });
+      renderHome();
+    } catch (_) { /* المتجر غير متاح الآن؛ يبقى التطبيق يعمل بالوحدة المجانية */ }
+  }
+  // ---------- القلوب: مشتركة بين الدروس، وتمتلئ بعد مدة الانتظار ----------
+  const HEARTS_MAX = (M.hearts && M.hearts.max) || 5;
+  const REFILL_MS = ((M.hearts && M.hearts.refillHours) || 8) * 3600e3;
+  function syncHearts() {
+    const h = state.hearts || (state.hearts = { count: HEARTS_MAX, refillAt: null });
+    // إن قصُرت مدة الامتلاء (كانت ١٦ ساعة) فلا ينتظر أحد أكثر من المدة الحالية
+    if (h.refillAt && h.refillAt - Date.now() > REFILL_MS) { h.refillAt = Date.now() + REFILL_MS; save(); }
+    if (h.refillAt && Date.now() >= h.refillAt) { h.count = HEARTS_MAX; h.refillAt = null; save(); }
+    return h;
+  }
+  const heartsLeft = () => (isPremium() ? Infinity : syncHearts().count);
+  function loseHeart() {
+    if (isPremium()) return;
+    const h = syncHearts();
+    h.count = Math.max(0, h.count - 1);
+    if (!h.refillAt) h.refillAt = Date.now() + REFILL_MS;   // يبدأ العدّ من أول قلب يُفقد
+    save();
+  }
+  function fmtLeft(ms) {
+    const t = Math.max(0, Math.ceil(ms / 1000));
+    const hh = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60), ss = t % 60;
+    return toAr(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`);
+  }
+
+  function isSubUnlocked(j, k) {
+    if (k === 1) {
+      if (j === TOP) return true;
+      return juzDone(j + 1) && (!isUnitEnd(j + 1) || unitDone(unitOf(j + 1)));
+    }
+    return subDone(j, k - 1);
+  }
+  function currentSub() {
+    for (const U of UNITS) {
+      for (let j = U.from; j >= U.to; j--) {
+        for (let k = 1; k <= subCount(j); k++) {
+          if (!subDone(j, k)) return isSubUnlocked(j, k) ? { j, k } : null;
+        }
+      }
+      if (!unitDone(U.u)) return isUnitUnlocked(U.u) ? { u: U.u } : null;
+    }
+    return null;
+  }
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  // ------------------------------------------------------------------
+  // الأصوات (WebAudio بدون ملفات)
+  // ------------------------------------------------------------------
+  let audioCtx = null;
+  function beep(notes) {
+    if (!state.sound) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      let t = audioCtx.currentTime;
+      notes.forEach(([freq, dur]) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(t); o.stop(t + dur + 0.02);
+        t += dur * 0.8;
+      });
+    } catch (_) {}
+  }
+  const sfx = {
+    ok: () => beep([[660, 0.12], [880, 0.18]]),
+    bad: () => beep([[300, 0.16], [220, 0.25]]),
+    win: () => beep([[523, 0.14], [659, 0.14], [784, 0.14], [1046, 0.3]]),
+    tap: () => beep([[520, 0.05]]),
+  };
+
+  // ------------------------------------------------------------------
+  // الشاشة الرئيسية
+  // ------------------------------------------------------------------
+  const OFFSETS = [0, 44, 72, 44, 0, -44, -72, -44];
+
+  function effectiveStreak() {
+    if (state.lastDay === dayKey() || state.lastDay === yesterdayKey()) return state.streak;
+    return 0;
+  }
+  const todayXP = () => (state.daily.day === dayKey() ? state.daily.xp : 0);
+  const totalStars = () =>
+    Object.values(state.progress).reduce((a, p) => a + Object.values(p.subs || {}).reduce((x, y) => x + y, 0), 0) +
+    Object.values(state.units).reduce((a, b) => a + b, 0);
+  const doneJuzCount = () => STAGES.filter((s) => juzDone(s.juz)).length;
+  const MAX_STARS = (STAGES.reduce((a, st) => a + subCount(st.juz), 0) + UNITS.length) * 3;
+
+  function renderHome() {
+    $("stat-streak").textContent = toAr(effectiveStreak());
+    $("stat-xp").textContent = toAr(state.xp);
+    renderHeartsBadge();
+    $("stat-done").textContent = toAr(doneJuzCount());
+    $("stat-total").textContent = toAr(STAGES.length);
+
+    const dx = todayXP();
+    $("daily-label").textContent = `${toAr(Math.min(dx, DAILY_GOAL))} / ${toAr(DAILY_GOAL)} نقطة`;
+    $("daily-fill").style.width = `${Math.min(100, (dx / DAILY_GOAL) * 100)}%`;
+
+    const path = $("path");
+    path.innerHTML = "";
+    const cur = currentSub();
+    let n = 0;
+
+    const addNode = ({ cls, content, label, stars, isCur, bubble, onClick, aria }) => {
+      const wrap = el("div", "node-wrap");
+      wrap.style.transform = `translateX(${OFFSETS[n % OFFSETS.length]}px)`;
+      n++;
+      const btn = el("button", "node " + cls);
+      btn.setAttribute("aria-label", aria);
+      btn.innerHTML = content;
+      if (isCur) { btn.classList.add("current"); wrap.appendChild(el("div", "start-bubble", bubble)); }
+      btn.addEventListener("click", onClick);
+      wrap.appendChild(btn);
+      wrap.appendChild(el("div", "node-label", `<div class="node-stars">${starsHtml(stars)}</div>${label}`));
+      path.appendChild(wrap);
+    };
+
+    UNITS.forEach((U) => {
+      path.appendChild(el("div", "unit-title", `<span>${U.name}</span><small>${stName(U.from)} – ${stName(U.to)}</small>`));
+
+      for (let j = U.from; j >= U.to; j--) {
+        const s = stageByJuz(j);
+        const locked = !isSubUnlocked(j, 1);
+        const b = el("div", "unit-banner" + (locked ? " locked" : ""));
+        if (!locked) b.style.backgroundColor = U.color;
+        b.innerHTML = `<div class="ub-text"><small>المرحلة ${toAr(TOP - j + 1)}</small><b>${esc(s.title)}</b><small>${esc(s.surahs)}</small></div>
+          <div class="ub-progress">${juzDone(j) ? ic("trophy") : locked ? ic("lock") : `${toAr(juzSubsDone(j))}/${toAr(subCount(j))}`}</div>`;
+        path.appendChild(b);
+
+        subsOf(j).forEach((sub) => {
+          const k = sub.k;
+          const unlocked = isSubUnlocked(j, k);
+          const stars = subStars(j, k);
+          addNode({
+            cls: (sub.test ? "test" : "") + (!unlocked ? " locked" : stars ? " done" : ""),
+            content: sub.test ? ic("trophy") : !unlocked ? ic("lock") : toAr(k),
+            label: sub.short,
+            stars,
+            isCur: cur && cur.j === j && cur.k === k,
+            bubble: k === 1 ? `ابدأ ${stName(j)}` : "ابدأ",
+            onClick: () => openStage(j, k),
+            aria: `${stName(j)}، ${sub.short}`,
+          });
+        });
+      }
+
+      // الجولة الختامية للوحدة
+      const uUnlocked = isUnitUnlocked(U.u);
+      const uStars = unitStars(U.u);
+      addNode({
+        cls: "unit-final" + (!uUnlocked ? " locked" : uStars ? " done" : ""),
+        content: uUnlocked ? ic("rub") : ic("lock"),
+        label: `الجولة الختامية<br>${U.name}`,
+        stars: uStars,
+        isCur: cur && cur.u === U.u,
+        bubble: "الجولة الختامية",
+        onClick: () => openUnit(U.u),
+        aria: `الجولة الختامية ${U.name}`,
+      });
+    });
+
+    if (!renderHome._scrolled) {
+      requestAnimationFrame(() => {
+        const node = path.querySelector(".node.current");
+        if (node) node.scrollIntoView({ block: "center" });
+        renderHome._scrolled = true;
+      });
+    }
+    renderReview();
+    renderStats();
+  }
+
+  function renderReview() {
+    state.mistakes = state.mistakes.filter((id) => qById(id));
+    $("mistakes-count").textContent = toAr(state.mistakes.length);
+    $("btn-review").disabled = state.mistakes.length === 0;
+    const grid = $("skill-buttons");
+    grid.innerHTML = "";
+    Object.entries(CATEGORIES).forEach(([key, c]) => {
+      const b = el("button", "skill-btn", `<span style="color:${c.color}">${ic(c.icon)}</span>${c.name}`);
+      b.style.borderBottomColor = c.color;
+      b.addEventListener("click", () => startSkill(key));
+      grid.appendChild(b);
+    });
+  }
+
+  function renderStats() {
+    $("k-streak").textContent = toAr(effectiveStreak());
+    $("k-xp").textContent = toAr(state.xp);
+    $("k-stars").textContent = toAr(totalStars());
+    $("k-stars-max").textContent = `نجمة من ${toAr(MAX_STARS)}`;
+    let c = 0, t = 0;
+    Object.values(state.stats).forEach((s) => { c += s.c; t += s.t; });
+    $("plan-status").textContent = !M.enabled ? "" : isPremium() && state.premium ? "مشترك في «بلس» — قلوب غير محدودة" : "التطبيق مجاني بالكامل، والاشتراك اختياري لمن يرغب";
+    $("k-acc").textContent = t ? `${toAr(Math.round((c / t) * 100))}٪` : "—";
+    const bars = $("skill-bars");
+    bars.innerHTML = "";
+    Object.entries(CATEGORIES).forEach(([key, cat]) => {
+      const s = state.stats[key] || { c: 0, t: 0 };
+      const pct = s.t ? Math.round((s.c / s.t) * 100) : 0;
+      const row = el("div", "skill-row");
+      row.innerHTML = `<div class="skill-row-head"><span class="row-name"><i style="color:${cat.color}">${ic(cat.icon)}</i>${cat.name}</span><span class="muted">${s.t ? toAr(pct) + "٪ — " + toAr(s.c) + "/" + toAr(s.t) : "لم تبدأ بعد"}</span></div>
+        <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>`;
+      bars.appendChild(row);
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // نافذة المرحلة
+  // ------------------------------------------------------------------
+  let modalSel = null;
+
+  function itemsForSub(j, k) {
+    if (k <= lessonsOf(j)) return lessonBuckets(j)[k - 1];
+    return diverseSample(juzItems(j), TEST_SIZE);
+  }
+  function itemsForUnit(u) {
+    const U = UNITS[u];
+    const per = Math.ceil(UNIT_SIZE / (U.from - U.to + 1));
+    let items = [];
+    for (let j = U.from; j >= U.to; j--) items = items.concat(diverseSample(juzItems(j), per));
+    return shuffle(items).slice(0, UNIT_SIZE);
+  }
+  const catChips = (items) => {
+    const cats = CAT_ORDER.filter((c) => items.some((it) => it.q.c === c));
+    return cats.map((c) => `<span style="border-color:${CATEGORIES[c].color}"><i style="color:${CATEGORIES[c].color}">${ic(CATEGORIES[c].icon)}</i>${CATEGORIES[c].name}</span>`).join("");
+  };
+
+  function showModal({ badge, badgeBg, title, sub, chips, stars, startLabel }) {
+    const b = $("m-badge");
+    b.innerHTML = badge;
+    b.style.background = badgeBg;
+    $("m-title").textContent = title;
+    $("m-surahs").textContent = sub;
+    $("m-cats").innerHTML = chips;
+    $("m-stars").innerHTML = stars ? starsHtml(stars, 3) : "";
+    $("m-start").textContent = startLabel;
+    $("modal-stage").classList.add("open");
+  }
+
+  function openStage(j, k) {
+    if (!isSubUnlocked(j, k)) {
+      sfx.bad();
+      const prevUnit = k === 1 && isUnitEnd(j + 1) && juzDone(j + 1);
+      toast(k > 1 ? `أكمل ${subsOf(j)[k - 2].short} أولًا`
+        : prevUnit ? "اجتز الجولة الختامية للوحدة السابقة أولًا"
+        : `أكمل اختبار ${stName(j + 1)} أولًا`);
+      return;
+    }
+    sfx.tap();
+    if (k === 1 && needsGate(j)) {
+      const prev = gateJuzs(j);
+      modalSel = { gate: j };
+      showModal({
+        badge: ic("rub"),
+        badgeBg: "var(--gold)",
+        title: `مراجعة قبل دخول ${stName(j)}`,
+        sub: prev.length === 1 ? `${toAr(GATE_PER_JUZ)} أسئلة من ${stName(prev[0])}`
+          : `${toAr(GATE_PER_JUZ)} أسئلة من كل طبقة من ${stName(prev[0])} – ${stName(prev[prev.length - 1])} — ${toAr(prev.length * GATE_PER_JUZ)} سؤالًا`,
+        chips: `<span style="border-color:var(--gold)">يُفتح الدرس الأول من ${stName(j)} بعد إتمامها، ولا تُنقص القلوب</span>`,
+        stars: 0,
+        startLabel: "ابدأ المراجعة",
+      });
+      return;
+    }
+    modalSel = { j, k };
+    const s = stageByJuz(j);
+    const sub = subsOf(j)[k - 1];
+    const items = k <= lessonsOf(j) ? lessonBuckets(j)[k - 1] : juzItems(j);
+    const count = sub.test ? Math.min(TEST_SIZE, items.length) : items.length;
+    const stars = subStars(j, k);
+    showModal({
+      badge: sub.test ? ic("trophy") : toAr(k),
+      badgeBg: sub.test ? "var(--navy)" : "var(--primary)",
+      title: `${sub.short} — ${s.title}`,
+      sub: `${stName(j)} — المرحلة ${toAr(k)} من ${toAr(subCount(j))} — ${toAr(count)} أسئلة`,
+      chips: sub.test ? `<span style="border-color:var(--navy)">أسئلة منوّعة من محاور الطبقة كلها</span>` : catChips(items),
+      stars,
+      startLabel: stars ? "أعِد المرحلة" : sub.test ? "ابدأ الاختبار" : "ابدأ الدرس",
+    });
+  }
+
+  function openUnit(u) {
+    if (!isUnitUnlocked(u)) {
+      sfx.bad();
+      toast(`أكمل اختبار ${stName(UNITS[u].to)} أولًا`);
+      return;
+    }
+    sfx.tap();
+    modalSel = { u };
+    const U = UNITS[u];
+    const stars = unitStars(u);
+    showModal({
+      badge: ic("rub"),
+      badgeBg: "var(--gold)",
+      title: `الجولة الختامية — ${U.name}`,
+      sub: `أسئلة منوّعة من ${stName(U.from)} – ${stName(U.to)} — ${toAr(UNIT_SIZE)} سؤالًا`,
+      chips: `<span style="border-color:var(--gold)">تُفتح الوحدة التالية بعد اجتيازها</span>`,
+      stars,
+      startLabel: stars ? "أعِد الجولة" : "ابدأ الجولة الختامية",
+    });
+  }
+  function closeModal() { $("modal-stage").classList.remove("open"); }
+
+  // ---------- نافذة القلوب ----------
+  let heartsTimer = null;
+  function renderHeartsBadge() {
+    const n = heartsLeft();
+    $("stat-hearts").textContent = n === Infinity ? "∞" : toAr(n);
+  }
+  function openHearts() {
+    const tick = () => {
+      const h = syncHearts();
+      const prem = isPremium();
+      $("h-count").textContent = prem ? "∞" : toAr(h.count);
+      $("h-icons").innerHTML = Array.from({ length: HEARTS_MAX }, (_, i) =>
+        `<span class="${prem || i < h.count ? "on" : "off"}">${ic("heart", "", true)}</span>`).join("");
+      $("h-title").textContent = prem ? "قلوب غير محدودة" : h.count === 0 ? "نفدت قلوبك" : h.count < HEARTS_MAX ? "قلوبك" : "قلوبك ممتلئة";
+      $("h-timer").textContent = !prem && h.refillAt ? `تمتلئ كلها بعد ${fmtLeft(h.refillAt - Date.now())}` : "";
+      $("h-sub").textContent = prem ? "شكرًا لاشتراكك في «بلس»" :
+        h.count === 0 ? "انتظر حتى تمتلئ قلوبك، وتستطيع خلال ذلك مراجعة أخطائك والتدرّب على المحاور دون أن تخسر قلوبًا." :
+        `كل خطأ في الدروس يُنقص قلبًا، وتمتلئ القلوب بعد ${toAr(REFILL_MS / 3600e3)} ساعة من أول قلب تخسره.`;
+      $("h-plus").hidden = prem || !M.enabled;
+      renderHeartsBadge();
+    };
+    tick();
+    clearInterval(heartsTimer);
+    heartsTimer = setInterval(tick, 1000);
+    $("modal-hearts").classList.add("open");
+  }
+  function closeHearts() { clearInterval(heartsTimer); $("modal-hearts").classList.remove("open"); renderHome(); }
+
+  // ---------- شاشة الاشتراك ----------
+  let selectedPlan = null;
+  const money = (n) => toAr(n.toFixed(2)).replace(".", "٫");
+  function renderPlus() {
+    if (!M.enabled) return;
+    const box = $("plus-plans");
+    box.innerHTML = "";
+    if (!selectedPlan) selectedPlan = (M.plans.find((p) => p.best) || M.plans[0]).id;
+    const plans = M.plans.filter((p) => !(NP && p.webOnly));
+    box.classList.toggle("two", plans.length === 2);
+    plans.forEach((p) => {
+      const pk = storePackages[p.id];
+      const priceHtml = pk ? esc(pk.product.priceString) : `${money(p.price)} <small>${esc(M.currency)}</small>`;
+      const b = el("button", "plan" + (p.id === selectedPlan ? " sel" : "") + (p.best ? " best" : ""),
+        `${p.best ? '<span class="plan-flag">الأوفر</span>' : ""}<b>${esc(p.name)}</b>
+         <span class="plan-price">${priceHtml}</span>
+         <small class="muted">${esc(p.period)}</small><small class="plan-note">${esc(p.note || "")}</small>`);
+      b.addEventListener("click", () => { selectedPlan = p.id; sfx.tap(); renderPlus(); });
+      box.appendChild(b);
+    });
+    const active = isPremium() && state.premium;
+    $("plus-status").textContent = active
+      ? `اشتراكك فعّال حتى ${new Date(state.premium.until).toLocaleDateString("ar")}`
+      : "";
+    $("plus-cta").textContent = active ? "اشتراكك فعّال" : "اشترك الآن";
+    $("plus-cta").disabled = !!active;
+    $("plus-code-box").hidden = !!NP;
+    $("plus-restore").hidden = !NP;
+    $("plus-legal").innerHTML = (NP
+      ? "يتجدد الاشتراك تلقائيًا ويُخصم من حسابك في المتجر ما لم تُلغِه قبل ٢٤ ساعة على الأقل من نهاية الفترة، ويمكنك إدارته أو إلغاؤه من إعدادات حسابك في المتجر. "
+      : "يمكنك إلغاء الاشتراك في أي وقت. ") +
+      `<a href="${esc(M.privacyUrl)}" target="_blank" rel="noopener">سياسة الخصوصية</a> · <a href="${esc(M.termsUrl)}" target="_blank" rel="noopener">شروط الاستخدام</a>`;
+    const sc = $("plus-scholar");
+    sc.hidden = !M.scholarshipContact;
+    if (M.scholarshipContact) sc.querySelector("b").textContent = M.scholarshipContact;
+  }
+  function openPlus() {
+    sfx.tap();
+    renderPlus();
+    show("screen-plus");
+  }
+  async function subscribe() {
+    if (NP) {
+      const pk = storePackages[selectedPlan];
+      if (!pk) { toast("الاشتراك غير متاح حاليًا، حاول لاحقًا"); return; }
+      const btn = $("plus-cta"); btn.disabled = true;
+      const r = await NP.purchase(pk);
+      btn.disabled = false;
+      if (r.customerInfo) {
+        applyCustomerInfo(r.customerInfo);
+        if (isPremium()) { sfx.win(); toast("تم الاشتراك، بارك الله لك"); }
+      } else if (!r.cancelled) toast("تعذّر إتمام الشراء: " + r.error);
+      renderPlus();
+      return;
+    }
+    const url = M.checkoutLinks && M.checkoutLinks[selectedPlan];
+    if (!url) { toast("الدفع الإلكتروني يُفعَّل قريبًا إن شاء الله"); return; }
+    window.open(url, "_blank", "noopener");
+  }
+  async function restore() {
+    if (!NP) return;
+    try {
+      applyCustomerInfo(await NP.restore());
+      toast(isPremium() ? "تمت استعادة اشتراكك" : "لم نجد اشتراكًا سابقًا لهذا الحساب");
+      renderPlus(); renderHome();
+    } catch (_) { toast("تعذّرت الاستعادة، حاول لاحقًا"); }
+  }
+  async function activate() {
+    const code = $("plus-code").value.trim();
+    if (!code) { toast("أدخل رمز التفعيل الذي وصلك بعد الدفع"); return; }
+    if (!M.licenseApi) { toast("التفعيل غير متاح بعد؛ سيُفعَّل مع بوابة الدفع"); return; }
+    try {
+      const r = await fetch(M.licenseApi, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: code }) });
+      const d = await r.json();
+      if (!d.valid) { toast("الرمز غير صحيح أو منتهي الصلاحية"); return; }
+      state.premium = { plan: d.plan, token: code, until: d.until };
+      save();
+      sfx.win();
+      toast("تم تفعيل الاشتراك، بارك الله لك");
+      renderPlus();
+    } catch (_) { toast("تعذّر الاتصال بالخادم، حاول لاحقًا"); }
+  }
+
+  // نافذة تأكيد داخل الصفحة (بديل confirm)
+  function ask(text, sub, okLabel) {
+    return new Promise((res) => {
+      $("c-text").textContent = text;
+      $("c-sub").textContent = sub || "";
+      $("c-ok").textContent = okLabel || "نعم";
+      const m = $("modal-confirm");
+      m.classList.add("open");
+      const done = (v) => { m.classList.remove("open"); $("c-ok").onclick = $("c-cancel").onclick = m.onclick = null; res(v); };
+      $("c-ok").onclick = () => done(true);
+      $("c-cancel").onclick = () => done(false);
+      m.onclick = (e) => { if (e.target === m) done(false); };
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // محرّك الدرس
+  // ------------------------------------------------------------------
+  let L = null; // حالة الدرس الحالي
+
+  // الدروس والاختبارات والجولات الختامية تستهلك القلوب؛ أما المراجعة والتدريب فمجانيان دائمًا
+  const usesHearts = (mode) => mode === "stage" || mode === "unit";
+
+  function startLesson(mode, items, meta = {}) {
+    if (!items.length) { toast("لا توجد أسئلة متاحة بعد"); return; }
+    if (usesHearts(mode) && heartsLeft() <= 0) { openHearts(); return; }
+    L = {
+      mode, meta, items,
+      queue: meta.fixed ? items.slice() : shuffle(items),
+      total: items.length,
+      done: 0,
+      hearts: usesHearts(mode) ? heartsLeft() : Infinity,
+      mistakes: 0,
+      attempts: 0,
+      seen: new Set(),
+      cur: null,
+      answered: false,
+      selection: null,
+      matchFailed: false,
+    };
+    show("screen-lesson");
+    nextQuestion();
+  }
+
+  const startStage = (j, k) => startLesson("stage", itemsForSub(j, k), { juz: j, k });
+  const startUnit = (u) => startLesson("unit", itemsForUnit(u), { u });
+  // مراجعة الدخول: قبل أول درس في الجزء j تُعرض ٥ أسئلة من كل طبقة من الأجزاء الستة التي قبله
+  const GATE_PER_JUZ = 5;
+  const GATE_SPAN = 6;     // من الأجزاء الستة السابقة فقط → ٣٠ سؤالًا حدًّا أعلى
+  const gateJuzs = (j) => STAGES.map((s) => s.juz).filter((x) => x > j).sort((a, b) => a - b).slice(0, GATE_SPAN).reverse();
+  const needsGate = (j) => gateJuzs(j).length > 0 && !state.gates[j] && !subDone(j, 1);
+  function itemsForGate(j) {
+    return gateJuzs(j).flatMap((x) => diverseSample(juzItems(x), GATE_PER_JUZ));
+  }
+  const startGate = (j) => startLesson("gate", itemsForGate(j), { juz: j });
+  function startReview() {
+    const items = state.mistakes.map(qById).filter(Boolean);
+    startLesson("review", shuffle(items).slice(0, 10));
+  }
+  function startSkill(cat) {
+    const items = [];
+    STAGES.forEach((s) => {
+      if (!isSubUnlocked(s.juz, 1)) return;
+      s.questions.forEach((q, i) => { if (q.c === cat) items.push({ id: `${s.juz}:${i}`, juz: s.juz, q }); });
+    });
+    if (!items.length) { toast("افتح مراحل أكثر لتتدرّب على هذا المحور"); return; }
+    startLesson("skill", shuffle(items).slice(0, 8), { cat });
+  }
+
+  function updateLessonTop() {
+    $("lesson-fill").style.width = `${(L.done / L.total) * 100}%`;
+    $("hearts").textContent = L.hearts === Infinity ? "∞" : toAr(L.hearts);
+  }
+
+  function nextQuestion() {
+    if (L.hearts <= 0) return finishLesson(false);
+    if (!L.queue.length) return finishLesson(true);
+    L.cur = L.queue.shift();
+    L.answered = false;
+    L.selection = null;
+    L.matchFailed = false;
+    updateLessonTop();
+
+    const { q, juz } = L.cur;
+    const cat = CATEGORIES[q.c];
+    const chip = $("q-chip");
+    chip.style.background = cat.color;
+    chip.innerHTML = `${ic(cat.icon)}<span>${cat.name}${L.mode !== "stage" ? " — " + stName(juz) : ""}</span>`;
+    $("q-text").innerHTML = esc(q.t === "tf" ? `صح أم خطأ؟ ${q.q}` : q.q);
+    renderAyah(q, false);
+
+    const footer = $("lesson-footer");
+    footer.classList.remove("ok", "bad");
+    const btn = $("btn-check");
+    btn.textContent = "تحقّق";
+    btn.disabled = true;
+    btn.style.display = "";
+
+    const body = $("q-body");
+    body.innerHTML = "";
+    if (q.t === "match") renderMatch(q, body);
+    else renderMCQ(q, body);
+    $("screen-lesson").querySelector(".lesson-main").scrollTop = 0;
+  }
+
+  // ---------- اختيار من متعدد / صح وخطأ ----------
+  const KEYS = ["أ", "ب", "ج", "د", "هـ"];
+  // آخر ترتيب عُرض به كل سؤال، حتى يتغيّر موضع الخيارات عند تكراره
+  const lastLayout = {};
+
+  /** خلط يضمن أن يختلف الترتيب عن المرة السابقة، وأن ينتقل الجواب الصحيح إلى موضع آخر */
+  function arrangeDifferent(key, items, isCorrect) {
+    const prev = lastLayout[key] || (state.lastPos && state.lastPos[key] != null ? { pos: state.lastPos[key] } : null);
+    let out = shuffle(items);
+    if (prev && items.length > 1) {
+      for (let t = 0; t < 30; t++) {
+        const pos = isCorrect ? out.findIndex(isCorrect) : -1;
+        const sameOrder = prev.order && out.every((o, i) => o.text === prev.order[i]);
+        const samePos = isCorrect && pos === prev.pos;
+        if (!sameOrder && !samePos) break;
+        out = shuffle(items);
+      }
+    }
+    const pos = isCorrect ? out.findIndex(isCorrect) : -1;
+    lastLayout[key] = { order: out.map((o) => o.text), pos };
+    if (isCorrect) { state.lastPos = state.lastPos || {}; state.lastPos[key] = pos; }
+    return out;
+  }
+
+  function buildOptions(q, id) {
+    const opts = q.t === "tf"
+      ? [{ text: "صحيح", correct: q.v === true }, { text: "خطأ", correct: q.v === false }]
+      : q.o.map((text, i) => ({ text, correct: i === 0 }));
+    return arrangeDifferent(id, opts, (o) => o.correct);
+  }
+
+  function renderMCQ(q, body) {
+    const opts = buildOptions(q, L.cur.id);
+    L.opts = opts;
+    const wrap = el("div", "options" + (opts.length === 2 ? " two" : ""));
+    opts.forEach((o, i) => {
+      const b = el("button", "opt", `<span class="key">${KEYS[i]}</span><span>${esc(o.text)}</span>`);
+      b.addEventListener("click", () => selectOpt(i));
+      wrap.appendChild(b);
+    });
+    body.appendChild(wrap);
+  }
+  function selectOpt(i) {
+    if (L.answered) return;
+    sfx.tap();
+    L.selection = i;
+    document.querySelectorAll(".opt").forEach((b, k) => b.classList.toggle("selected", k === i));
+    $("btn-check").disabled = false;
+  }
+  function checkMCQ() {
+    const correctIdx = L.opts.findIndex((o) => o.correct);
+    const ok = L.selection === correctIdx;
+    document.querySelectorAll(".opt").forEach((b, k) => {
+      b.disabled = true;
+      b.classList.remove("selected");
+      if (k === correctIdx) b.classList.add("correct");
+      else if (k === L.selection) b.classList.add("wrong");
+    });
+    resolve(ok, L.opts[correctIdx].text);
+  }
+
+  // ---------- المطابقة ----------
+  function renderMatch(q, body) {
+    $("btn-check").style.display = "none";
+    const words = arrangeDifferent(L.cur.id + ":w", q.p.map((p, i) => ({ text: p[0], i })));
+    const means = arrangeDifferent(L.cur.id + ":m", q.p.map((p, i) => ({ text: p[1], i })));
+    const grid = el("div", "match");
+    const colW = el("div", "match-col");
+    const colM = el("div", "match-col");
+    let selW = null, selM = null, matched = 0;
+
+    const tryPair = () => {
+      if (!selW || !selM) return;
+      const a = selW, b = selM;
+      selW = selM = null;
+      if (a.dataset.i === b.dataset.i) {
+        sfx.ok();
+        [a, b].forEach((n) => { n.classList.remove("sel"); n.classList.add("ok"); n.disabled = true; });
+        matched++;
+        if (matched === q.p.length) setTimeout(() => resolve(!L.matchFailed, null), 250);
+      } else {
+        sfx.bad();
+        L.matchFailed = true;
+        [a, b].forEach((n) => { n.classList.remove("sel"); n.classList.add("bad"); });
+        setTimeout(() => [a, b].forEach((n) => n.classList.remove("bad")), 450);
+      }
+    };
+    const mk = (item, cls, col, side) => {
+      const t = el("button", "tile " + cls);
+      t.textContent = item.text;
+      t.dataset.i = item.i;
+      t.addEventListener("click", () => {
+        if (t.disabled || L.answered) return;
+        sfx.tap();
+        col.querySelectorAll(".tile.sel").forEach((n) => n.classList.remove("sel"));
+        t.classList.add("sel");
+        if (side === "w") selW = t; else selM = t;
+        tryPair();
+      });
+      col.appendChild(t);
+    };
+    words.forEach((w) => mk(w, "word", colW, "w"));
+    means.forEach((m) => mk(m, "mean", colM, "m"));
+    grid.appendChild(colW);
+    grid.appendChild(colM);
+    body.appendChild(grid);
+  }
+
+  // ---------- تقييم الإجابة ----------
+  function resolve(ok, correctText) {
+    L.answered = true;
+    L.attempts++;
+    const { q, id } = L.cur;
+    const st = state.stats[q.c] || (state.stats[q.c] = { c: 0, t: 0 });
+    st.t++;
+    const firstTime = !L.seen.has(id);
+    L.seen.add(id);
+
+    if (ok) {
+      st.c++;
+      L.done++;
+      if (firstTime) state.mistakes = state.mistakes.filter((m) => m !== id);
+      sfx.ok();
+    } else {
+      L.mistakes++;
+      if (usesHearts(L.mode)) { loseHeart(); L.hearts = heartsLeft(); }
+      if (L.mode !== "challenge") L.queue.push(L.cur); // في التحدي يُحسب الجواب الأول فقط
+      if (!state.mistakes.includes(id)) state.mistakes.push(id);
+      sfx.bad();
+      const h = $("screen-lesson").querySelector(".hearts");
+      h.classList.remove("shake"); void h.offsetWidth; h.classList.add("shake");
+    }
+    save();
+    updateLessonTop();
+
+    const footer = $("lesson-footer");
+    footer.classList.add(ok ? "ok" : "bad");
+    $("fb-icon").innerHTML = ic(ok ? "check" : "close");
+    $("fb-title").textContent = ok ? pick(["أحسنت!", "ممتاز!", "بارك الله فيك!", "إجابة صحيحة!"]) : "الإجابة الصحيحة:";
+    $("fb-answer").textContent = !ok && correctText ? correctText : "";
+    $("fb-explain").innerHTML = esc(q.e || "");
+    if (q.a && leakOf(q)) renderAyah(q, true); // كشف الآية المخفية بعد الإجابة
+    const src = sourceOf(q);
+    $("fb-source").innerHTML = `${ic("sources")} <b>${esc(src.label)}:</b> ${esc(src.text)}` +
+      (q.verified ? ` <span class="verified">${ic("seal")}موثّق من المكتبة الشاملة</span>` : "");
+    const btn = $("btn-check");
+    btn.style.display = "";
+    btn.disabled = false;
+    btn.textContent = ok ? "متابعة" : "فهمت، متابعة";
+    btn.focus({ preventScroll: true });
+  }
+
+  function onCheck() {
+    if (!L) return;
+    if (L.answered) return nextQuestion();
+    if (L.cur.q.t !== "match" && L.selection != null) checkMCQ();
+  }
+
+  // ------------------------------------------------------------------
+  // تحدّي صديق: عشرة أسئلة ثابتة يُرسل رمزها أو رابطها، فيجيب الصديق عن الأسئلة نفسها بالترتيب نفسه
+  // لا يحتاج خادمًا: الرمز يحمل أرقام الأسئلة واسم المتحدّي ونتيجته ووقته
+  // ------------------------------------------------------------------
+  const CH_SIZE = 10;
+  const b64e = (str) => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const b64d = (b) => decodeURIComponent(escape(atob(b.replace(/-/g, "+").replace(/_/g, "/"))));
+  const encodeCh = (o) => "QQ" + b64e(JSON.stringify(o));
+  function decodeCh(text) {
+    const m = String(text || "").match(/QQ([A-Za-z0-9_-]{10,})/);
+    if (!m) return null;
+    try {
+      const o = JSON.parse(b64d(m[1]));
+      const items = (o.q || []).map(qById).filter(Boolean);
+      if (items.length < 5) return null;
+      return { name: String(o.n || "صديقك").slice(0, 30), q: o.q, items, score: +o.s || 0, ms: +o.t || 0, total: items.length };
+    } catch (_) { return null; }
+  }
+  const shareBase = () => {
+    const cfg = (MONETIZATION && MONETIZATION.shareUrl) || "";
+    if (cfg) return cfg;
+    return /^https?:$/.test(location.protocol) && !/^(localhost|127\.)/.test(location.hostname) && !/claudeusercontent|claude\.ai/.test(location.hostname)
+      ? location.origin + location.pathname : "";
+  };
+  const fmtSec = (ms) => `${toAr(Math.round(ms / 1000))} ث`;
+  function playerName() {
+    const v = ($("ch-name") && $("ch-name").value.trim()) || state.name || "";
+    if (v && v !== state.name) { state.name = v.slice(0, 30); save(); }
+    return state.name || "صديقك";
+  }
+  function createChallenge() {
+    playerName();
+    let pool = [];
+    STAGES.forEach((st) => { if (isSubUnlocked(st.juz, 1)) pool = pool.concat(juzItems(st.juz)); });
+    if (!pool.length) pool = juzItems(TOP);
+    const items = diverseSample(pool, CH_SIZE);
+    startLesson("challenge", items, { fixed: true, t0: Date.now() });
+  }
+  function acceptChallenge(text) {
+    const ch = decodeCh(text);
+    if (!ch) { sfx.bad(); toast("الرمز غير صحيح، تأكد من نسخه كاملًا"); return; }
+    ask(`تحدّاك ${ch.name}`, `${toAr(ch.total)} أسئلة بالترتيب نفسه. نتيجته ${toAr(ch.score)} من ${toAr(ch.total)} في ${fmtSec(ch.ms)}. لا تُنقص القلوب، ويُحسب الجواب الأول فقط.`, "ابدأ التحدي")
+      .then((ok) => { if (ok) startLesson("challenge", ch.items, { fixed: true, t0: Date.now(), vs: ch }); });
+  }
+  async function shareText(text) {
+    try {
+      if (navigator.share) { await navigator.share({ text }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(text); toast("نُسخ النص، الصقه لصديقك"); }
+    catch (_) { window.prompt("انسخ هذا النص وأرسله لصديقك:", text); }
+  }
+  function shareChallengeResult() {
+    const r = L && L.meta && L.meta.result;
+    if (!r) return;
+    const base = shareBase();
+    if (r.vs) {
+      const verdict = r.score > r.vs.score ? "فزتُ" : r.score < r.vs.score ? "فاز" : "تعادلنا";
+      shareText(`${APP_NAME} — نتيجة تحدي ${r.vs.name}:\nأنا ${toAr(r.score)} من ${toAr(r.total)} (${fmtSec(r.ms)})، و${r.vs.name} ${toAr(r.vs.score)} من ${toAr(r.vs.total)} (${fmtSec(r.vs.ms)}). ${verdict === "فاز" ? "فاز " + r.vs.name : verdict}!`);
+      return;
+    }
+    const code = encodeCh({ v: 1, n: state.name || "صديقك", q: r.q, s: r.score, t: r.ms });
+    shareText(`تحدّاك ${state.name || "صديقك"} في «${APP_NAME}»: أجاب عن ${toAr(r.score)} من ${toAr(r.total)} أسئلة في ${fmtSec(r.ms)}. هل تغلبه؟\n` +
+      (base ? `${base}#c=${code}\n` : "") + `أو افتح التطبيق ← المراجعة ← تحدَّ صديقًا، والصق الرمز:\n${code}`);
+  }
+  function checkIncomingChallenge() {
+    const h = location.hash || "";
+    if (!/^#c=/.test(h)) return;
+    const code = h.slice(3);
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (_) {}
+    setTimeout(() => acceptChallenge(code), 300);
+  }
+
+  // ---------- إنهاء الدرس ----------
+  function finishLesson(passed) {
+    if (L.mode === "challenge") return finishChallenge();
+    const acc = L.attempts ? Math.round(((L.attempts - L.mistakes) / L.attempts) * 100) : 0;
+    let xp = 0, stars = 0, firstClear = false;
+    const { juz: j, k, u } = L.meta;
+    if (passed) {
+      stars = L.mistakes === 0 ? 3 : L.mistakes <= 2 ? 2 : 1;
+      xp = L.total * 2 + (L.mode === "stage" ? stars * 2 + (k === subCount(j) ? 10 : 0) : 0) + (L.mode === "unit" ? 30 : 0);
+      if (L.mode === "stage") {
+        const p = state.progress[j] || (state.progress[j] = { subs: {} });
+        firstClear = !p.subs[k];
+        p.subs[k] = Math.max(stars, p.subs[k] || 0);
+      } else if (L.mode === "gate") {
+        firstClear = !state.gates[j];
+        state.gates[j] = true;
+      } else if (L.mode === "unit") {
+        firstClear = !state.units[u];
+        state.units[u] = Math.max(stars, state.units[u] || 0);
+      }
+    } else {
+      xp = L.done;
+    }
+    state.xp += xp;
+    if (state.daily.day !== dayKey()) state.daily = { day: dayKey(), xp: 0 };
+    state.daily.xp += xp;
+    if (passed) {
+      const today = dayKey();
+      if (state.lastDay !== today) {
+        state.streak = state.lastDay === yesterdayKey() ? state.streak + 1 : 1;
+        state.lastDay = today;
+      }
+    }
+    save();
+
+    const isTest = L.mode === "stage" && k === subCount(j);
+    const isUnit = L.mode === "unit";
+    $("r-emoji").className = "result-emoji " + (!passed ? "fail" : isUnit ? "unit" : "win");
+    $("r-emoji").innerHTML = ic(!passed ? "heartBroken" : isUnit ? "rub" : isTest ? "trophy" : "star", "", passed && !isUnit && !isTest);
+    $("r-title").textContent = !passed ? "نفدت القلوب" : isUnit ? "أتممت الوحدة!" : isTest ? "أتممت الطبقة!" : stars === 3 ? "إتقان تام!" : "أحسنت!";
+    let sub = "";
+    if (!passed) {
+      const h = syncHearts();
+      sub = h.refillAt ? `لا بأس، المراجعة طريق الإتقان. تمتلئ قلوبك بعد ${fmtLeft(h.refillAt - Date.now())}، وتستطيع حتى ذلك الحين مراجعة أخطائك دون قلوب.` : "لا بأس، المراجعة طريق الإتقان. حاول مرة أخرى!";
+    }
+    else if (isUnit) {
+      const U = UNITS[u];
+      sub = u === UNITS.length - 1 ? "ختمتَ الطبقات كلها"
+        : `اجتزت الجولة الختامية لـ${U.name}` + (firstClear ? ` وفُتح لك ${stName(U.to - 1)}` : "");
+    } else if (L.mode === "stage") {
+      if (isTest) {
+        sub = isUnitEnd(j) ? `أتممت ${stName(j)}، وبقيت الجولة الختامية للوحدة`
+          : firstClear ? `أتممت ${stName(j)} بمراحله كلها، وفُتح لك ${stName(j - 1)}` : `أتممت اختبار ${stName(j)}`;
+      } else {
+        sub = `أتممت ${subsOf(j)[k - 1].short} من ${stName(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
+      }
+    } else if (L.mode === "gate") {
+      sub = `أتممت مراجعة الطبقات السابقة، وفُتح لك الدرس الأول من ${stName(j)}`;
+    } else sub = L.mode === "review" ? "أتممت جلسة المراجعة" : "أتممت جلسة التدريب";
+    $("r-sub").textContent = sub;
+    $("r-stars").innerHTML = passed && (L.mode === "stage" || isUnit) ? starsHtml(stars, 3) : "";
+    $("r-xp").textContent = `+${toAr(xp)}`;
+    $("r-acc").textContent = `${toAr(acc)}٪`;
+    const canRetry = !passed || L.mode === "stage" || isUnit;
+    $("btn-retry").style.display = canRetry ? "" : "none";
+    $("btn-retry").textContent = passed ? "أعِد لتحسين النجوم" : "إعادة المحاولة";
+    show("screen-result");
+    if (passed) sfx.win(); else sfx.bad();
+  }
+
+  function finishChallenge() {
+    const ms = Date.now() - L.meta.t0, total = L.total, score = Math.max(0, total - L.mistakes);
+    const vs = L.meta.vs;
+    L.meta.result = { q: L.meta.vs ? vs.q : L.items.map((it) => it.id), score, total, ms, vs };
+    const xp = score * 2;
+    state.xp += xp;
+    if (state.daily.day !== dayKey()) state.daily = { day: dayKey(), xp: 0 };
+    state.daily.xp += xp;
+    save();
+    let title, sub, win = true;
+    if (vs) {
+      const d = score - vs.score || (vs.ms - ms > 0 ? 1 : vs.ms - ms < 0 ? -1 : 0);
+      win = d > 0;
+      title = d > 0 ? "فزتَ بالتحدي!" : d < 0 ? `فاز ${vs.name}` : "تعادل!";
+      sub = `أنت ${toAr(score)} من ${toAr(total)} في ${fmtSec(ms)} — ${vs.name} ${toAr(vs.score)} من ${toAr(vs.total)} في ${fmtSec(vs.ms)}` +
+        (score === vs.score ? " (عند تساوي الإجابات يفوز الأسرع)" : "");
+    } else {
+      title = "أنهيت التحدي";
+      sub = `أجبت عن ${toAr(score)} من ${toAr(total)} في ${fmtSec(ms)}. أرسل التحدي لصديق ليجيب عن الأسئلة نفسها.`;
+    }
+    $("r-emoji").className = "result-emoji " + (win ? "win" : "fail");
+    $("r-emoji").innerHTML = ic(win ? "trophy" : "heartBroken", "", false);
+    $("r-title").textContent = title;
+    $("r-sub").textContent = sub;
+    $("r-stars").innerHTML = "";
+    $("r-xp").textContent = `+${toAr(xp)}`;
+    $("r-acc").textContent = `${toAr(Math.round((score / total) * 100))}٪`;
+    $("btn-retry").style.display = "";
+    $("btn-retry").textContent = vs ? "أرسل النتيجة" : "أرسل التحدي لصديق";
+    show("screen-result");
+    if (win) sfx.win(); else sfx.bad();
+  }
+
+  // ------------------------------------------------------------------
+  // التنقل
+  // ------------------------------------------------------------------
+  function show(id) {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("active", s.id === id));
+    window.scrollTo(0, 0);
+    if (id === "screen-home") { renderHome._scrolled = false; renderHome(); }
+  }
+
+  function bind() {
+    document.querySelectorAll(".nav-btn").forEach((b) =>
+      b.addEventListener("click", () => {
+        document.querySelectorAll(".nav-btn").forEach((n) => n.classList.toggle("active", n === b));
+        document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === b.dataset.tab));
+        window.scrollTo(0, 0);
+        if (b.dataset.tab === "tab-path") { renderHome._scrolled = false; renderHome(); }
+      })
+    );
+    $("m-start").addEventListener("click", () => {
+      closeModal();
+      if (modalSel.gate != null) startGate(modalSel.gate);
+      else if (modalSel.u != null) startUnit(modalSel.u); else startStage(modalSel.j, modalSel.k);
+    });
+    $("m-close").addEventListener("click", closeModal);
+    $("modal-stage").addEventListener("click", (e) => { if (e.target.id === "modal-stage") closeModal(); });
+    $("btn-check").addEventListener("click", onCheck);
+    $("btn-quit").addEventListener("click", async () => {
+      if (L && L.done > 0 && !(await ask("هل تريد الخروج؟", "سيضيع تقدّمك في هذه المرحلة.", "خروج"))) return;
+      L = null;
+      show("screen-home");
+    });
+    $("btn-continue").addEventListener("click", () => {
+      const after = L && L.mode === "gate" && state.gates[L.meta.juz] ? L.meta.juz : null;
+      L = null; show("screen-home");
+      if (after != null) openStage(after, 1); // بعد المراجعة يُعرض الدرس الأول مباشرة
+    });
+    $("btn-retry").addEventListener("click", () => {
+      const { mode, meta } = L;
+      if (mode === "stage") startStage(meta.juz, meta.k);
+      else if (mode === "unit") startUnit(meta.u);
+      else if (mode === "skill") startSkill(meta.cat);
+      else if (mode === "gate") startGate(meta.juz);
+      else if (mode === "challenge") shareChallengeResult();
+      else startReview();
+    });
+    $("btn-review").addEventListener("click", startReview);
+    $("ch-create").addEventListener("click", createChallenge);
+    $("ch-accept").addEventListener("click", () => acceptChallenge($("ch-code").value));
+    if (state.name) $("ch-name").value = state.name;
+    $("btn-plus").addEventListener("click", openPlus);
+    $("plus-close").addEventListener("click", () => show("screen-home"));
+    $("plus-cta").addEventListener("click", subscribe);
+    $("plus-activate").addEventListener("click", activate);
+    $("plus-restore").addEventListener("click", restore);
+    $("stat-hearts-btn").addEventListener("click", openHearts);
+    $("h-close").addEventListener("click", closeHearts);
+    $("h-practice").addEventListener("click", () => { closeHearts(); state.mistakes.length ? startReview() : (document.querySelector('[data-tab="tab-review"]').click()); });
+    $("h-plus").addEventListener("click", () => { closeHearts(); openPlus(); });
+    $("modal-hearts").addEventListener("click", (e) => { if (e.target.id === "modal-hearts") closeHearts(); });
+    // تحديث عداد القلوب في الشريط العلوي إذا امتلأت أثناء فتح التطبيق
+    setInterval(() => { if ($("screen-home").classList.contains("active")) renderHeartsBadge(); }, 30000);
+    $("btn-reset").addEventListener("click", async () => {
+      if (!(await ask("إعادة ضبط التقدّم؟", "سيُحذف كل تقدّمك ونقاطك ونجومك.", "احذف التقدّم"))) return;
+      state = defaultState();
+      save();
+      renderHome._scrolled = false;
+      renderHome();
+      toast("تمت إعادة الضبط");
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!$("screen-lesson").classList.contains("active") || !L) return;
+      if (e.key === "Enter") { e.preventDefault(); if (!$("btn-check").disabled) onCheck(); return; }
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= 4 && L.cur && L.cur.q.t !== "match" && L.opts && n <= L.opts.length) selectOpt(n - 1);
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // تشغيل
+  // ------------------------------------------------------------------
+  bind();
+  renderHome();
+  initStore();
+  checkIncomingChallenge();
+
+  if (!NP && "serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+})();

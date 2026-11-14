@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1f7a5c"/>
+  <!-- نجمة ثمانية ذهبية -->
+  <g transform="translate(256 256)">
+    <rect x="-150" y="-150" width="300" height="300" rx="18" fill="#c9a227"/>
+    <rect x="-150" y="-150" width="300" height="300" rx="18" fill="#c9a227" transform="rotate(45)"/>
+    <rect x="-118" y="-118" width="236" height="236" rx="12" fill="#1f7a5c"/>
+    <rect x="-118" y="-118" width="236" height="236" rx="12" fill="#1f7a5c" transform="rotate(45)"/>
+  </g>
+  <!-- مصحف مفتوح -->
+  <path d="M256 214c-30-18-68-23-104-16v104c36-7 74-2 104 16 30-18 68-23 104-16V198c-36-7-74-2-104 16z" fill="#fcfbf7"/>
+  <path d="M256 214v104" stroke="#c9a227" stroke-width="8" stroke-linecap="round"/>
+</svg>

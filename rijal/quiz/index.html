@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>مسابقات رجال الحديث</title>
+  <meta name="description" content="تعلّم رجال الحديث خطوة بخطوة على طبقات ابن حجر: الجرح والتعديل، والوفيات، والشيوخ والتلاميذ، ومراتب المدلسين — من كتبها بحروفها.">
+  <meta name="theme-color" content="#1f7a5c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ الشاشة الرئيسية ============ -->
+    <section id="screen-home" class="screen active">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark"><svg class="orn orn-open" viewBox="0 0 18 40" aria-hidden="true" fill="currentColor"><path d="M2 1C9 7 11.2 13.2 11.2 20S9 33 2 39C5.6 32.6 6.6 26.4 6.6 20S5.6 7.4 2 1z"/><path fill-rule="evenodd" d="M14.6 14.2l2.7 5.8-2.7 5.8-2.7-5.8zM14.6 18.2l.85 1.8-.85 1.8-.85-1.8z"/><circle cx="10.3" cy="10.5" r="1.1"/><circle cx="10.3" cy="29.5" r="1.1"/></svg></span><span>مسابقات رجال الحديث</span><span class="brand-mark"><svg class="orn orn-close" viewBox="0 0 18 40" aria-hidden="true" fill="currentColor"><path d="M2 1C9 7 11.2 13.2 11.2 20S9 33 2 39C5.6 32.6 6.6 26.4 6.6 20S5.6 7.4 2 1z"/><path fill-rule="evenodd" d="M14.6 14.2l2.7 5.8-2.7 5.8-2.7-5.8zM14.6 18.2l.85 1.8-.85 1.8-.85-1.8z"/><circle cx="10.3" cy="10.5" r="1.1"/><circle cx="10.3" cy="29.5" r="1.1"/></svg></span>
+        </div>
+        <div class="stats-row">
+          <button class="stat stat-btn" id="stat-hearts-btn" title="القلوب"><span class="stat-ico heart"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><b id="stat-hearts">٥</b></button>
+          <span class="stat" title="أيام متتالية"><span class="stat-ico flame"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.3 3.6-8.3.4 2 1.5 3 2.6 3.4C11.9 7.5 13 5 15.6 3c-.4 3.3 3 5.3 3 10 0 4.6-2.8 8-6.6 8z"/></svg></span><b id="stat-streak">0</b></span>
+          <span class="stat" title="نقاط الخبرة"><span class="stat-ico xp"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 9-7 9-7-9z"/><path d="M12 7.6l3.4 4.4-3.4 4.4-3.4-4.4z" opacity=".5"/></svg></span><b id="stat-xp">0</b></span>
+          <span class="stat" title="الطبقات المكتملة"><span class="stat-ico trophy"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4.5a4 4 0 0 1-8 0zM8 6H5.2a2.8 2.8 0 0 0 2.9 3.8M16 6h2.8a2.8 2.8 0 0 1-2.9 3.8M12 12.5v3.5M8.5 20h7M10 20l.4-4h3.2l.4 4"/></svg></span><b id="stat-done">0</b>/<span id="stat-total"></span></span>
+        </div>
+      </header>
+
+      <main class="home-main">
+        <div id="tab-path" class="tab active">
+          <div class="daily">
+            <div class="daily-text">
+              <b>هدف اليوم</b>
+              <span id="daily-label">0 / 30 نقطة</span>
+            </div>
+            <div class="bar"><div class="bar-fill" id="daily-fill"></div></div>
+          </div>
+          <div id="path" class="path" aria-label="مسار المراحل"></div>
+        </div>
+
+        <div id="tab-review" class="tab">
+          <div class="panel">
+            <h2>مراجعة الأخطاء</h2>
+            <p class="muted">الأسئلة التي أخطأت فيها تُحفظ هنا لتراجعها حتى تُتقنها.</p>
+            <div class="big-number" id="mistakes-count">0</div>
+            <p class="muted center">سؤالًا بانتظار المراجعة</p>
+            <button class="btn btn-primary btn-block" id="btn-review">ابدأ المراجعة</button>
+          </div>
+          <div class="panel challenge">
+            <h2>تحدَّ صديقًا</h2>
+            <p class="muted">أجب عن عشرة أسئلة ثم أرسل التحدي لصديقك؛ يجيب عن الأسئلة نفسها بالترتيب نفسه، ويفوز الأكثر صوابًا ثم الأسرع.</p>
+            <input id="ch-name" class="field" type="text" maxlength="30" placeholder="اسمك كما يظهر لصديقك" autocomplete="nickname">
+            <button class="btn btn-primary btn-block" id="ch-create">أنشئ تحديًا</button>
+            <div class="ch-or"><span>أو تلقّيت تحديًا؟</span></div>
+            <input id="ch-code" class="field" type="text" placeholder="الصق رمز التحدي أو رسالته هنا" dir="ltr">
+            <button class="btn btn-ghost btn-block" id="ch-accept">قبول التحدي</button>
+          </div>
+          <div class="panel">
+            <h2>تدريب حسب المحور</h2>
+            <p class="muted">اختر محورًا لتتدرّب على أسئلته من الطبقات التي فتحتها.</p>
+            <div id="skill-buttons" class="skill-grid"></div>
+          </div>
+        </div>
+
+        <div id="tab-stats" class="tab">
+          <div class="panel">
+            <h2>إحصائياتك</h2>
+            <div class="kpis">
+              <div class="kpi"><span class="flame"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.3 3.6-8.3.4 2 1.5 3 2.6 3.4C11.9 7.5 13 5 15.6 3c-.4 3.3 3 5.3 3 10 0 4.6-2.8 8-6.6 8z"/></svg></span><b id="k-streak">0</b><small>أيام متتالية</small></div>
+              <div class="kpi"><span class="xp"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 9-7 9-7-9z"/><path d="M12 7.6l3.4 4.4-3.4 4.4-3.4-4.4z" opacity=".5"/></svg></span><b id="k-xp">0</b><small>نقطة خبرة</small></div>
+              <div class="kpi"><span class="gold"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.6 3.4 4.2-.5-.5 4.2 3.4 2.6-3.4 2.6.5 4.2-4.2-.5-2.6 3.4-2.6-3.4-4.2.5.5-4.2L2.8 12l3.4-2.6-.5-4.2 4.2.5z"/></svg></span><b id="k-stars">0</b><small id="k-stars-max">نجمة</small></div>
+              <div class="kpi"><span class="primary"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></svg></span><b id="k-acc">0%</b><small>دقة الإجابات</small></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>إتقان المحاور</h2>
+            <div id="skill-bars"></div>
+          </div>
+          <div class="panel plus-panel">
+            <h2 class="with-ic"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9.5 4L12 20l2.5-16"/></svg> مسابقات رجال الحديث بلس</h2>
+            <p class="muted" id="plan-status"></p>
+            <button class="btn btn-gold btn-block" id="btn-plus">عرض خطط الاشتراك</button>
+          </div>
+          <div class="panel">
+            <button class="btn btn-ghost btn-block" id="btn-reset">إعادة ضبط التقدّم</button>
+          </div>
+        </div>
+      </main>
+
+      <nav class="bottom-nav">
+        <button class="nav-btn active" data-tab="tab-path"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="5" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="7" cy="19" r="2"/><path d="M9 6l6 5M15 13l-6 5"/></svg>المسار</button>
+        <button class="nav-btn" data-tab="tab-review"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12A8 8 0 0 1 18.3 7.1"/><path d="M18.5 3v4.4h-4.4M5.5 21v-4.4h4.4"/></svg>المراجعة</button>
+        <button class="nav-btn" data-tab="tab-stats"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-8M12 20V5M19 20v-5M3 20h18"/></svg>الإحصائيات</button>
+      </nav>
+    </section>
+
+    <!-- ============ شاشة الدرس ============ -->
+    <section id="screen-lesson" class="screen">
+      <header class="lesson-top">
+        <button class="icon-btn" id="btn-quit" aria-label="إغلاق"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <div class="bar lesson-bar"><div class="bar-fill" id="lesson-fill"></div></div>
+        <div class="hearts"><span><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><b id="hearts">5</b></div>
+      </header>
+
+      <main class="lesson-main">
+        <div id="q-chip" class="chip"></div>
+        <h2 id="q-text" class="q-text"></h2>
+        <div id="q-ayah" class="ayah"></div>
+        <div id="q-body"></div>
+      </main>
+
+      <footer id="lesson-footer" class="lesson-footer">
+        <div class="feedback" id="feedback">
+          <div class="fb-head"><span id="fb-icon"></span><b id="fb-title"></b></div>
+          <div class="fb-answer" id="fb-answer"></div>
+          <p class="fb-explain" id="fb-explain"></p>
+          <p class="fb-source" id="fb-source"></p>
+        </div>
+        <button class="btn btn-primary btn-block" id="btn-check" disabled>تحقّق</button>
+      </footer>
+    </section>
+
+    <!-- ============ شاشة النتيجة ============ -->
+    <section id="screen-result" class="screen">
+      <main class="result-main">
+        <div class="result-emoji win" id="r-emoji"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.6 3.4 4.2-.5-.5 4.2 3.4 2.6-3.4 2.6.5 4.2-4.2-.5-2.6 3.4-2.6-3.4-4.2.5.5-4.2L2.8 12l3.4-2.6-.5-4.2 4.2.5z"/></svg></div>
+        <h1 id="r-title">أحسنت!</h1>
+        <p class="muted" id="r-sub"></p>
+        <div class="r-stars" id="r-stars"></div>
+        <div class="r-cards">
+          <div class="r-card xp"><small>نقاط</small><b id="r-xp">0</b></div>
+          <div class="r-card acc"><small>الدقة</small><b id="r-acc">0%</b></div>
+        </div>
+      </main>
+      <footer class="lesson-footer">
+        <button class="btn btn-primary btn-block" id="btn-continue">متابعة</button>
+        <button class="btn btn-ghost btn-block" id="btn-retry">إعادة المحاولة</button>
+      </footer>
+    </section>
+
+    <!-- ============ شاشة الاشتراك ============ -->
+    <section id="screen-plus" class="screen">
+      <header class="lesson-top">
+        <button class="icon-btn" id="plus-close" aria-label="إغلاق"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </header>
+      <main class="plus-main">
+        <div class="plus-hero"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9.5 4L12 20l2.5-16"/></svg></div>
+        <h1>مسابقات رجال الحديث <span class="plus-word">بلس</span></h1>
+        <p class="muted center">التطبيق بكل طبقاته مجاني للجميع.<br>الاشتراك اختياري لمن يرغب في اللعب دون انتظار، ودعم استمرار المشروع.</p>
+        <ul class="plus-perks">
+          <li><i class="heart"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></i>قلوب غير محدودة: تابع التعلّم دون انتظار امتلاء القلوب</li>
+          <li><i class="primary"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8M12 13c0-4-3-6.5-7-6.5 0 4 3 6.5 7 6.5zM12 11c0-3.5 2.6-6 6.5-6 0 3.5-2.6 6-6.5 6z"/></svg></i>ادعم استمرار المشروع وتطوير محتواه</li>
+        </ul>
+        <div class="plans" id="plus-plans"></div>
+        <p class="plus-status" id="plus-status"></p>
+        <button class="btn btn-primary btn-block" id="plus-cta">اشترك الآن</button>
+        <button class="btn btn-ghost btn-block" id="plus-restore" hidden>استعادة المشتريات</button>
+        <p class="plus-legal muted small" id="plus-legal"></p>
+        <div class="plus-code" id="plus-code-box">
+          <label for="plus-code">لديك رمز تفعيل؟</label>
+          <div class="plus-code-row">
+            <input id="plus-code" type="text" inputmode="text" autocomplete="off" placeholder="أدخل الرمز">
+            <button class="btn btn-ghost" id="plus-activate">تفعيل</button>
+          </div>
+        </div>
+        <p class="muted center small" id="plus-scholar" hidden>غير قادر على الاشتراك؟ نمنح الاشتراك مجانًا لطلاب العلم وغير القادرين — تواصل معنا: <b></b></p>
+      </main>
+    </section>
+
+    <!-- ============ نافذة القلوب ============ -->
+    <div class="modal" id="modal-hearts" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="h-icons" id="h-icons"></div>
+        <h2 id="h-title">قلوبك</h2>
+        <div class="h-count"><b id="h-count">٥</b></div>
+        <p class="h-timer" id="h-timer"></p>
+        <p class="muted" id="h-sub"></p>
+        <button class="btn btn-primary btn-block" id="h-practice">راجع أخطاءك (بدون قلوب)</button>
+        <button class="btn btn-gold btn-block" id="h-plus"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9.5 4L12 20l2.5-16"/></svg> قلوب غير محدودة مع «بلس»</button>
+        <button class="btn btn-ghost btn-block" id="h-close">حسنًا</button>
+      </div>
+    </div>
+
+    <!-- ============ نافذة المرحلة ============ -->
+    <div class="modal" id="modal-stage" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="m-badge" id="m-badge"></div>
+        <h2 id="m-title"></h2>
+        <p class="muted" id="m-surahs"></p>
+        <div class="m-cats" id="m-cats"></div>
+        <div class="m-stars" id="m-stars"></div>
+        <button class="btn btn-primary btn-block" id="m-start">ابدأ المرحلة</button>
+        <button class="btn btn-ghost btn-block" id="m-close">لاحقًا</button>
+      </div>
+    </div>
+
+    <!-- ============ نافذة التأكيد ============ -->
+    <div class="modal" id="modal-confirm" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h2 id="c-text"></h2>
+        <p class="muted" id="c-sub"></p>
+        <button class="btn btn-danger btn-block" id="c-ok">نعم</button>
+        <button class="btn btn-ghost btn-block" id="c-cancel">إلغاء</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="js/icons.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

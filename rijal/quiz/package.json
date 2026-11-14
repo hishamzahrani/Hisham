@@ -1,0 +1,24 @@
+{
+  "name": "rijal-quest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "مسابقات رجال الحديث — تطبيق تعليمي لرجال الحديث",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "sync": "npm run build && npx cap sync",
+    "android": "npm run sync && npx cap open android",
+    "ios": "npm run sync && npx cap open ios",
+    "review": "node scripts/export-review.mjs && python3 scripts/build-review.py && python3 scripts/build-by-category.py"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.3",
+    "@revenuecat/purchases-capacitor": "^9.2.2"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.2.3",
+    "@capacitor/ios": "^6.2.3",
+    "esbuild": "^0.23.1"
+  }
+}
