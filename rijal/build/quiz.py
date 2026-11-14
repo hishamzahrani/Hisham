@@ -74,7 +74,7 @@ def display_name(name, n=8):
     """الاسم كما في السطر حتى أول ضبطٍ بالحروف أو تعريفٍ زائد، وبحدّ أقصى n كلمات."""
     out = []
     for w in name.split():
-        if norm(w) in DABT:
+        if norm(w) in DABT or (out and len(out) >= 2 and norm(w) in START1):
             break
         out.append(w)
     return short(" ".join(out) or name, n)
@@ -123,7 +123,7 @@ def main():
     here = Path(__file__).resolve().parent.parent
     ap.add_argument("--data", default=str(here / "app" / "data"))
     ap.add_argument("--out", default=str(here / "quiz" / "js" / "data.js"))
-    ap.add_argument("--per-stage", type=int, default=60)
+    ap.add_argument("--per-stage", type=int, default=80)
     a = ap.parse_args()
     data = Path(a.data)
     T = json.loads((data / "taqrib.json").read_text(encoding="utf-8"))
@@ -166,12 +166,18 @@ def main():
         hukm_pool = [p["hukm"] for p in ps if p["hukm"]]
         death_pool = [p for p in ps if p["r"]["death"]]
         rz_pool = [p["r"]["rz"] for p in ps if p["r"]["rz"]]
-        list_pool = {side: [(nm, p["r"]["n"]) for p in ps if p["tk"] for nm, _ in p["tk"].get(side, [])]
+        list_pool = {side: [(nm, p["r"]["n"], norm(nm), name_key(nm)) for p in ps if p["tk"] for nm, _ in p["tk"].get(side, [])
+                            if not norm(nm).startswith("النبي")]
                      for side in ("from", "to")}
+        death_dy = {}
+        for x in death_pool:
+            death_dy.setdefault(x["r"]["death"], x["r"].get("dy") or 0)
+        death_list = list(death_dy)
         queues = defaultdict(list)
 
-        for p in ps:
-            r, nm = p["r"], display_name(p["name"]) if p["name"] else short(r["t"].split(None, 1)[-1], 6)
+        for p in ps[: a.per_stage]:  # أشهر الرواة يكفون لملء المرحلة؛ والخيارات من الطبقة كلها
+            r = p["r"]
+            nm = display_name(p["name"]) if p["name"] else display_name(re.sub(r"^\S+\s*", "", r["t"]), 6)
             line = r["t"]
             if p["hukm"]:
                 d = pick_distractors(p["hukm"], hukm_pool, rng)
@@ -186,8 +192,7 @@ def main():
                                            "v": truth, "e": line, "s": src_taq(r)})
             if r["death"]:
                 dy = r.get("dy") or 0
-                d = pick_distractors(r["death"], [x["r"]["death"] for x in death_pool], rng,
-                                     near=lambda x, dy=dy: abs((next((q["r"]["dy"] for q in death_pool if q["r"]["death"] == x), 0) or 0) - dy))
+                d = pick_distractors(r["death"], death_list, rng, near=lambda x, dy=dy: abs(death_dy[x] - dy))
                 if d:
                     queues["wafat"].append({"t": "mcq", "c": "wafat",
                                             "q": f"ما قال ابن حجر في وفاة «{nm}»؟",
@@ -214,9 +219,13 @@ def main():
                     lst = p["tk"].get(side, [])
                     if not lst:
                         continue
+                    lst = [x for x in lst if not norm(x[0]).startswith("النبي")]  # النبي ﷺ يتكرر برموز مختلفة
+                    if not lst:
+                        continue
                     correct = rng.choice(lst)[0]
-                    pool = [x for x, n in list_pool[side] if n != r["n"] and norm(x) not in own_norm
-                            and name_key(x) not in own_keys]
+                    cand = list_pool[side]
+                    cand = rng.sample(cand, min(len(cand), 400))
+                    pool = [x for x, n, xn, xk in cand if n != r["n"] and xn not in own_norm and xk not in own_keys]
                     d = pick_distractors(correct, pool, rng)
                     if d:
                         q = (f"مَن مِن هؤلاء ذكره المزي فيمن روى عنهم «{nm}»؟" if side == "from"
