@@ -17,14 +17,23 @@
 
   // المراحل الفرعية لكل جزء: دروس متنوعة (عددها بحسب أسئلة الجزء، ٦ على الأقل) + اختبار الجزء
   const AR_DIG = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
-  const lessonsOf = (j) => {
+  // ---------- المرحلتان ----------
+  // المرحلة الأولى: الأجزاء ٣٠←١ بالمحاور الأساسية. المرحلة الثانية (تُفتح بعد ختم الأولى): الأجزاء ٣٠←١ مرة أخرى
+  // بأسئلة جديدة من المحاور المتقدمة، ويُضاف إلى كل درس ربعٌ من أسئلة المرحلة الأولى للجزء نفسه مراجعةً.
+  const ADV_CATS = ["asalib", "balagha", "ahkam", "aqida", "usul"];
+  const OLD_SHARE = 0.25;       // نسبة أسئلة المرحلة الأولى في دروس المرحلة الثانية
+  const MIN_LESSONS2 = 2, LESSON_SIZE2 = 6;
+  let ROUND = 1;                // المرحلة المعروضة حاليًا
+  const inRound = (q, r) => (r === 2 ? ADV_CATS.includes(q.c) : !ADV_CATS.includes(q.c));
+  const lessonsOf = (j, r = ROUND) => {
     const st = STAGES.find((x) => x.juz === +j);
-    return Math.max(MIN_LESSONS, Math.ceil((st ? st.questions.filter((q) => !q.off).length : 0) / LESSON_SIZE));
+    const n = st ? st.questions.filter((q) => !q.off && inRound(q, r)).length : 0;
+    return r === 2 ? Math.max(MIN_LESSONS2, Math.ceil(n / LESSON_SIZE2)) : Math.max(MIN_LESSONS, Math.ceil(n / LESSON_SIZE));
   };
-  const subCount = (j) => lessonsOf(j) + 1;
+  const subCount = (j, r = ROUND) => lessonsOf(j, r) + 1;
   const subsCache = {};
-  const subsOf = (j) => subsCache[j] || (subsCache[j] = Array.from({ length: lessonsOf(j) }, (_, i) => ({ k: i + 1, short: `الدرس ${AR_DIG(i + 1)}` }))
-    .concat([{ k: lessonsOf(j) + 1, short: "اختبار الجزء", test: true }]));
+  const subsOf = (j, r = ROUND) => subsCache[r + ":" + j] || (subsCache[r + ":" + j] = Array.from({ length: lessonsOf(j, r) }, (_, i) => ({ k: i + 1, short: `الدرس ${AR_DIG(i + 1)}` }))
+    .concat([{ k: lessonsOf(j, r) + 1, short: "اختبار الجزء", test: true }]));
 
   // الوحدات: كل وحدة خمسة أجزاء، تُختم بجولة ختامية
   const UNIT_NAMES = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة"];
@@ -92,7 +101,7 @@
     return s;
   }
   function save() {
-    STAGES.forEach((st) => { state.subsL[st.juz] = lessonsOf(st.juz); });
+    STAGES.forEach((st) => { state.subsL[st.juz] = lessonsOf(st.juz, 1); });
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) {}
   }
 
@@ -195,19 +204,22 @@
     const s = stageByJuz(j);
     return s && s.questions[i] && !s.questions[i].off ? { id, juz: j, q: s.questions[i] } : null;
   };
-  const juzItems = (j) => stageByJuz(j).questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q })).filter((it) => !it.q.off);
+  const juzItems = (j, r = ROUND) => stageByJuz(j).questions.map((q, i) => ({ id: `${j}:${i}`, juz: j, q })).filter((it) => !it.q.off && inRound(it.q, r));
 
   /** توزيع أسئلة الجزء على الدروس الستة توزيعًا ثابتًا متنوّع المحاور */
   const lessonCache = {};
-  function lessonBuckets(j) {
-    if (lessonCache[j]) return lessonCache[j];
-    const all = juzItems(j);
+  function lessonBuckets(j, r = ROUND) {
+    const key = r + ":" + j;
+    if (lessonCache[key]) return lessonCache[key];
+    const all = juzItems(j, r);
     const ordered = CAT_ORDER.flatMap((c) => all.filter((it) => it.q.c === c));
-    const n = lessonsOf(j);
+    const n = lessonsOf(j, r);
     const buckets = Array.from({ length: n }, () => []);
     ordered.forEach((it, i) => buckets[i % n].push(it));
-    return (lessonCache[j] = buckets);
+    return (lessonCache[key] = buckets);
   }
+  // عدد أسئلة المراجعة من المرحلة الأولى التي تُضاف إلى n سؤالًا جديدًا لتكون ربع المجموع
+  const oldCount = (n) => Math.max(1, Math.round((n * OLD_SHARE) / (1 - OLD_SHARE)));
 
   /** اختيار عيّنة متنوعة المحاور من مجموعة أسئلة */
   function diverseSample(items, n) {
@@ -225,13 +237,17 @@
   }
 
   // ---------- التقدّم ----------
-  const subStars = (j, k) => (state.progress[j] && state.progress[j].subs[k]) || 0;
-  const subDone = (j, k) => subStars(j, k) > 0;
-  const juzDone = (j) => subDone(j, subCount(j));
+  const progOf = (r = ROUND) => (r === 2 ? state.progress2 || (state.progress2 = {}) : state.progress);
+  const unitsOf = (r = ROUND) => (r === 2 ? state.units2 || (state.units2 = {}) : state.units);
+  const subStars = (j, k, r = ROUND) => (progOf(r)[j] && progOf(r)[j].subs[k]) || 0;
+  const subDone = (j, k, r = ROUND) => subStars(j, k, r) > 0;
+  const juzDone = (j, r = ROUND) => subDone(j, subCount(j, r), r);
   const juzSubsDone = (j) => subsOf(j).filter((s) => subDone(j, s.k)).length;
-  const unitStars = (u) => state.units[u] || 0;
-  const unitDone = (u) => unitStars(u) > 0;
+  const unitStars = (u, r = ROUND) => unitsOf(r)[u] || 0;
+  const unitDone = (u, r = ROUND) => unitStars(u, r) > 0;
   const isUnitUnlocked = (u) => juzDone(UNITS[u].to);
+  // تُفتح المرحلة الثانية بعد اجتياز الجولة الختامية للوحدة الأخيرة في المرحلة الأولى
+  const round2Unlocked = () => unitDone(UNITS.length - 1, 1);
 
   // ---------- الاشتراك ----------
   const M = typeof MONETIZATION !== "undefined" ? MONETIZATION : { enabled: false };
@@ -292,7 +308,7 @@
 
   function isSubUnlocked(j, k) {
     if (k === 1) {
-      if (j === 30) return true;
+      if (j === 30) return ROUND === 1 || round2Unlocked();
       return juzDone(j + 1) && (!isUnitEnd(j + 1) || unitDone(unitOf(j + 1)));
     }
     return subDone(j, k - 1);
@@ -357,11 +373,12 @@
     return 0;
   }
   const todayXP = () => (state.daily.day === dayKey() ? state.daily.xp : 0);
-  const totalStars = () =>
-    Object.values(state.progress).reduce((a, p) => a + Object.values(p.subs || {}).reduce((x, y) => x + y, 0), 0) +
-    Object.values(state.units).reduce((a, b) => a + b, 0);
+  const sumStars = (prog, units) =>
+    Object.values(prog || {}).reduce((a, p) => a + Object.values(p.subs || {}).reduce((x, y) => x + y, 0), 0) +
+    Object.values(units || {}).reduce((a, b) => a + b, 0);
+  const totalStars = () => sumStars(state.progress, state.units) + sumStars(state.progress2, state.units2);
   const doneJuzCount = () => STAGES.filter((s) => juzDone(s.juz)).length;
-  const MAX_STARS = (STAGES.reduce((a, st) => a + subCount(st.juz), 0) + UNITS.length) * 3;
+  const MAX_STARS = (STAGES.reduce((a, st) => a + subCount(st.juz, 1) + subCount(st.juz, 2), 0) + UNITS.length * 2) * 3;
 
   function renderHome() {
     $("stat-streak").textContent = toAr(effectiveStreak());
@@ -375,6 +392,18 @@
 
     const path = $("path");
     path.innerHTML = "";
+    const r2 = round2Unlocked();
+    const sw = el("div", "round-switch",
+      `<button data-r="1" class="${ROUND === 1 ? "on" : ""}">المرحلة الأولى</button>` +
+      `<button data-r="2" class="${ROUND === 2 ? "on" : ""}${r2 ? "" : " locked"}">${r2 ? "" : ic("lock")}المرحلة الثانية</button>`);
+    sw.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+      const r = +b.dataset.r;
+      if (r === ROUND) return;
+      if (r === 2 && !round2Unlocked()) { sfx.bad(); toast("تُفتح المرحلة الثانية بعد ختم المرحلة الأولى كلها"); return; }
+      sfx.tap(); ROUND = r; state.round = r; save(); renderHome._scrolled = false; renderHome();
+    }));
+    path.appendChild(sw);
+    if (ROUND === 2) path.appendChild(el("p", "round-note", "أسئلة جديدة في أساليب القرآن والبلاغة والأحكام الفقهية والعقدية والأصولية، ومعها ربعٌ من أسئلة المرحلة الأولى للمراجعة."));
     const cur = currentSub();
     let n = 0;
 
@@ -488,6 +517,10 @@
   let modalSel = null;
 
   function itemsForSub(j, k) {
+    if (ROUND === 2) {
+      const fresh = k <= lessonsOf(j) ? lessonBuckets(j)[k - 1] : diverseSample(juzItems(j), Math.round(TEST_SIZE * (1 - OLD_SHARE)));
+      return fresh.concat(diverseSample(juzItems(j, 1), oldCount(fresh.length)));
+    }
     if (k <= lessonsOf(j)) return lessonBuckets(j)[k - 1];
     return diverseSample(juzItems(j), TEST_SIZE);
   }
@@ -496,7 +529,11 @@
     const per = Math.ceil(UNIT_SIZE / 5);
     let items = [];
     for (let j = U.from; j >= U.to; j--) items = items.concat(diverseSample(juzItems(j), per));
-    return shuffle(items).slice(0, UNIT_SIZE);
+    if (ROUND !== 2) return shuffle(items).slice(0, UNIT_SIZE);
+    const nNew = Math.round(UNIT_SIZE * (1 - OLD_SHARE));
+    let old = [];
+    for (let j = U.from; j >= U.to; j--) old = old.concat(diverseSample(juzItems(j, 1), 1));
+    return shuffle(items).slice(0, nNew).concat(shuffle(old).slice(0, UNIT_SIZE - nNew));
   }
   const catChips = (items) => {
     const cats = CAT_ORDER.filter((c) => items.some((it) => it.q.c === c));
@@ -544,16 +581,18 @@
     const s = stageByJuz(j);
     const sub = subsOf(j)[k - 1];
     const items = k <= lessonsOf(j) ? lessonBuckets(j)[k - 1] : juzItems(j);
-    const count = sub.test ? Math.min(TEST_SIZE, items.length) : items.length;
+    const base = sub.test ? Math.min(ROUND === 2 ? Math.round(TEST_SIZE * (1 - OLD_SHARE)) : TEST_SIZE, items.length) : items.length;
+    const count = ROUND === 2 ? base + oldCount(base) : base;
     const stars = subStars(j, k);
     showModal({
       badge: sub.test ? ic("trophy") : toAr(k),
       badgeBg: sub.test ? "var(--navy)" : "var(--primary)",
       title: `${sub.short} — ${s.title}`,
-      sub: `الجزء ${toAr(j)} — المرحلة ${toAr(k)} من ${toAr(subCount(j))} — ${toAr(count)} أسئلة`,
-      chips: sub.test ? `<span style="border-color:var(--navy)">أسئلة منوّعة من محاور الجزء كلها</span>` : catChips(items),
+      sub: `${ROUND === 2 ? "المرحلة الثانية — " : ""}الجزء ${toAr(j)} — الخطوة ${toAr(k)} من ${toAr(subCount(j))} — ${toAr(count)} ${count <= 10 ? "أسئلة" : "سؤالًا"}`,
+      chips: (sub.test ? `<span style="border-color:var(--navy)">أسئلة منوّعة من محاور الجزء كلها</span>` : catChips(items)) +
+        (ROUND === 2 ? `<span style="border-color:var(--gold)">ومعها ${toAr(oldCount(base))} من أسئلة المرحلة الأولى للمراجعة</span>` : ""),
       stars,
-      startLabel: stars ? "أعِد المرحلة" : sub.test ? "ابدأ الاختبار" : "ابدأ الدرس",
+      startLabel: stars ? "أعِد الدرس" : sub.test ? "ابدأ الاختبار" : "ابدأ الدرس",
     });
   }
 
@@ -734,14 +773,14 @@
     nextQuestion();
   }
 
-  const startStage = (j, k) => startLesson("stage", itemsForSub(j, k), { juz: j, k });
-  const startUnit = (u) => startLesson("unit", itemsForUnit(u), { u });
+  const startStage = (j, k) => startLesson("stage", itemsForSub(j, k), { juz: j, k, round: ROUND });
+  const startUnit = (u) => startLesson("unit", itemsForUnit(u), { u, round: ROUND });
   // مراجعة الدخول: قبل أول درس في الجزء j تُعرض ٥ أسئلة من كل جزء من الأجزاء الستة التي قبله
   const GATE_PER_JUZ = 5;
   const GATE_SPAN = 6;     // من الأجزاء الستة السابقة فقط → ٣٠ سؤالًا حدًّا أعلى
   const gateJuzs = (j) => STAGES.map((s) => s.juz).filter((x) => x > j).sort((a, b) => a - b).slice(0, GATE_SPAN).reverse();
   // أول جزء في كل وحدة (٢٥، ٢٠، ١٥، ١٠، ٥) تسبقه الجولة الختامية للوحدة السابقة، فلا مراجعة دخول له
-  const needsGate = (j) => gateJuzs(j).length > 0 && !isUnitEnd(j + 1) && !state.gates[j] && !subDone(j, 1);
+  const needsGate = (j) => ROUND === 1 && gateJuzs(j).length > 0 && !isUnitEnd(j + 1) && !state.gates[j] && !subDone(j, 1);
   function itemsForGate(j) {
     return gateJuzs(j).flatMap((x) => diverseSample(juzItems(x), GATE_PER_JUZ));
   }
@@ -1036,15 +1075,17 @@
       stars = L.mistakes === 0 ? 3 : L.mistakes <= 2 ? 2 : 1;
       xp = L.total * 2 + (L.mode === "stage" ? stars * 2 + (k === subCount(j) ? 10 : 0) : 0) + (L.mode === "unit" ? 30 : 0);
       if (L.mode === "stage") {
-        const p = state.progress[j] || (state.progress[j] = { subs: {} });
+        const pr = progOf(L.meta.round || 1);
+        const p = pr[j] || (pr[j] = { subs: {} });
         firstClear = !p.subs[k];
         p.subs[k] = Math.max(stars, p.subs[k] || 0);
       } else if (L.mode === "gate") {
         firstClear = !state.gates[j];
         state.gates[j] = true;
       } else if (L.mode === "unit") {
-        firstClear = !state.units[u];
-        state.units[u] = Math.max(stars, state.units[u] || 0);
+        const us = unitsOf(L.meta.round || 1);
+        firstClear = !us[u];
+        us[u] = Math.max(stars, us[u] || 0);
       }
     } else {
       xp = L.done;
@@ -1073,14 +1114,14 @@
     }
     else if (isUnit) {
       const U = UNITS[u];
-      sub = u === UNITS.length - 1 ? "ختمتَ رحلة الثلاثين جزءًا كاملة"
+      sub = u === UNITS.length - 1 ? ((L.meta.round || 1) === 2 ? "ختمتَ المرحلتين كلتيهما، بارك الله فيك" : "ختمتَ المرحلة الأولى، وفُتحت لك المرحلة الثانية: أساليب القرآن والبلاغة والأحكام والعقيدة والأصول")
         : `اجتزت الجولة الختامية لـ${U.name}` + (firstClear ? ` وفُتح لك الجزء ${toAr(U.to - 1)}` : "");
     } else if (L.mode === "stage") {
       if (isTest) {
         sub = isUnitEnd(j) ? `أتممت الجزء ${toAr(j)}، وبقيت الجولة الختامية للوحدة`
           : firstClear ? `أتممت الجزء ${toAr(j)} بمراحله كلها، وفُتح لك الجزء ${toAr(j - 1)}` : `أتممت اختبار الجزء ${toAr(j)}`;
       } else {
-        sub = `أتممت ${subsOf(j)[k - 1].short} من الجزء ${toAr(j)}` + (firstClear ? ` — فُتحت المرحلة ${toAr(k + 1)}` : "");
+        sub = `أتممت ${subsOf(j)[k - 1].short} من الجزء ${toAr(j)}` + (firstClear ? ` — فُتح الدرس التالي` : "");
       }
     } else if (L.mode === "gate") {
       sub = `أتممت مراجعة الأجزاء السابقة، وفُتح لك الدرس الأول من الجزء ${toAr(j)}`;
@@ -1156,7 +1197,7 @@
     $("modal-stage").addEventListener("click", (e) => { if (e.target.id === "modal-stage") closeModal(); });
     $("btn-check").addEventListener("click", onCheck);
     $("btn-quit").addEventListener("click", async () => {
-      if (L && L.done > 0 && !(await ask("هل تريد الخروج؟", "سيضيع تقدّمك في هذه المرحلة.", "خروج"))) return;
+      if (L && L.done > 0 && !(await ask("هل تريد الخروج؟", "سيضيع تقدّمك في هذا الدرس.", "خروج"))) return;
       L = null;
       show("screen-home");
     });
@@ -1210,6 +1251,7 @@
   // ------------------------------------------------------------------
   // تشغيل
   // ------------------------------------------------------------------
+  ROUND = state.round === 2 && round2Unlocked() ? 2 : 1;
   bind();
   renderHome();
   initStore();

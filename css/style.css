@@ -483,3 +483,9 @@ h1, h2, .unit-title span, .ub-text b { font-family: "Reem Kufi", "Tajawal", "Ami
 #ch-code { text-align: right; }
 .ch-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; color: var(--muted); font-size: 13px; }
 .ch-or::before, .ch-or::after { content: ""; flex: 1; height: 1px; background: var(--line, #e3dccb); }
+.round-switch { display: flex; gap: 8px; width: 100%; max-width: 420px; margin: 4px auto 14px; background: var(--surface-2); padding: 5px; border-radius: 16px; box-sizing: border-box; }
+.round-switch button { flex: 1; border: 0; background: transparent; padding: 10px 8px; border-radius: 12px; font: inherit; font-weight: 700; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.round-switch button.on { background: var(--primary); color: #fff; box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+.round-switch button.locked { opacity: .6; }
+.round-switch .ic { width: 16px; height: 16px; }
+.round-note { max-width: 420px; margin: -4px auto 12px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; padding: 0 12px; }

@@ -11,15 +11,21 @@ vm.runInContext(code, ctx);
 const { STAGES, CATEGORIES, sourceOf } = ctx.__out;
 const CAT_ORDER = Object.keys(CATEGORIES);
 const MIN_LESSONS = 6, LESSON_SIZE = 10; // مطابق لـ app.js
+const ADV_CATS = ["asalib", "balagha", "ahkam", "aqida", "usul"];
 
 const rows = [];
 for (const st of STAGES) {
   const items = st.questions.map((q, i) => ({ q, i })).filter((it) => !it.q.off); // المحذوف لا يُصدَّر
   // نفس توزيع الدروس في التطبيق
-  const ordered = CAT_ORDER.flatMap((c) => items.filter((it) => it.q.c === c));
-  const L = Math.max(MIN_LESSONS, Math.ceil(items.length / LESSON_SIZE));
+  // المرحلة الأولى: المحاور الأساسية؛ المرحلة الثانية: المحاور المتقدمة (مطابق لـ app.js)
   const lessonOf = {};
-  ordered.forEach((it, n) => (lessonOf[it.i] = (n % L) + 1));
+  for (const r of [1, 2]) {
+    const its = items.filter((it) => (r === 2) === ADV_CATS.includes(it.q.c));
+    const ordered = CAT_ORDER.flatMap((c) => its.filter((it) => it.q.c === c));
+    const L = r === 2 ? Math.max(2, Math.ceil(its.length / 6)) : Math.max(MIN_LESSONS, Math.ceil(its.length / LESSON_SIZE));
+    ordered.forEach((it, n) => (lessonOf[it.i] = r === 2 ? `م٢ - ${(n % L) + 1}` : (n % L) + 1));
+  }
+  const ordered = CAT_ORDER.flatMap((c) => items.filter((it) => it.q.c === c));
   for (const it of ordered) {
     const q = it.q;
     let answer, others;
