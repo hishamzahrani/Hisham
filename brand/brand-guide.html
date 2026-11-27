@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>دليل الهوية البصرية — مسابقات قرآنية</title>
+<title>مسابقات قرآنية — الهوية والتعريف</title>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -135,6 +135,19 @@
   .shot img { display: block; width: 100%; }
   .caption { text-align: center; font-size: 9pt; color: var(--muted); margin-top: 2mm; }
 .orn{display:inline-block;width:.45em;height:1.1em;vertical-align:-.18em;color:#c9a227}.orn-close{transform:scaleX(-1)}
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+  .stats > div { background: var(--surface); border: 1px solid var(--line); border-radius: 4mm; padding: 4mm; text-align: center; }
+  .stats b { display: block; font-family: "Reem Kufi", sans-serif; font-size: 22pt; color: var(--primary); line-height: 1.2; }
+  .stats span { font-size: 9.5pt; color: var(--muted); }
+  table.axes { width: 100%; border-collapse: collapse; font-size: 10pt; background: var(--surface); border-radius: 3mm; overflow: hidden; }
+  table.axes th { background: var(--primary); color: #fff; padding: 2.2mm 3mm; text-align: right; }
+  table.axes td { padding: 1.8mm 3mm; border-bottom: 1px solid var(--line); }
+  table.axes td.num { font-weight: 800; color: var(--primary-dark); }
+  .journey { gap: 3.5mm; }
+  .journey .card { padding: 4mm 5mm; }
+  .journey .card h3 { margin: 0 0 1.5mm; font-size: 12pt; }
+  .journey .card p { margin: 0; font-size: 9.6pt; line-height: 1.75; }
+  .stats { margin: 4mm 0 2mm; }
 </style>
 </head>
 <body>
@@ -142,14 +155,68 @@
 <!-- ============ ١. الغلاف ============ -->
 <section class="page cover">
   <div>
-    <div class="eyebrow">دليل الهوية البصرية — الإصدار ١٫٠</div>
+    <div class="eyebrow">دليل الهوية والتعريف بالمسابقة — الإصدار ٢٫٠</div>
   </div>
   <div style="display:flex;flex-direction:column;gap:9mm;align-items:flex-start">
     <img class="logo" src="../icons/icon-512.png" alt="">
     <h1>مسابقات قرآنية</h1>
-    <p class="lead" style="color:rgba(255,255,255,.9)">رحلة في معاني القرآن الكريم، جزءًا جزءًا، من جزء عمّ إلى الفاتحة. هذا الدليل يجمع قواعد الشعار والألوان والخطوط والأيقونات والعناصر ونبرة الكتابة، ليبقى التطبيق وكل ما يصدر عنه متّسقًا.</p>
+    <p class="lead" style="color:rgba(255,255,255,.9)">رحلة في معاني القرآن الكريم، جزءًا جزءًا، من جزء عمّ إلى الفاتحة. هذا الدليل يعرّف بالمسابقة ومراحلها ومحاورها ومصادرها، ويجمع قواعد الشعار والألوان والخطوط والأيقونات والعناصر ونبرة الكتابة، ليبقى التطبيق وكل ما يصدر عنه متّسقًا.</p>
   </div>
   <div class="bottom"><span>للفريق والمصمّمين والمطوّرين</span><span>٢٠٢٦</span></div>
+</section>
+
+
+<!-- ============ ١ب. التعريف ============ -->
+<section class="page">
+  <div class="eyebrow">٠٠ — التعريف</div>
+  <h2>ما «مسابقات قرآنية»؟</h2>
+  <p class="lead">تطبيق مسابقات تعليمي يأخذ المتسابق في رحلة مع معاني القرآن الكريم جزءًا جزءًا، من جزء عمّ إلى سورة الفاتحة، بدروس قصيرة متنوعة: غريب الألفاظ، وأسباب النزول، والتفسير، والمقاصد، والقراءات، والمتشابه، ثم الأساليب والبلاغة والأحكام والعقيدة والأصول. كل سؤال مصوغ صياغة تعليمية، ويُختم بشرح موجز ومصدره.</p>
+  <div class="stats">
+    <div><b>٢١٠٢</b><span>سؤالًا</span></div>
+    <div><b>١٥</b><span>محورًا</span></div>
+    <div><b>٣٠ × ٢</b><span>جزءًا في مرحلتين</span></div>
+    <div><b>٦</b><span>وحدات بجولات ختامية</span></div>
+  </div>
+  <h3>كيف تسير الرحلة</h3>
+  <div class="grid2 journey">
+    <div class="card"><h3>المرحلة الأولى</h3><p>الأجزاء من ٣٠ إلى ١ بالمحاور الأساسية. في كل جزء دروس متنوعة (نحو ١٠ أسئلة للدرس) ثم «اختبار الجزء».</p></div>
+    <div class="card"><h3>المرحلة الثانية</h3><p>تُفتح بعد ختم الأولى، فيعود المتسابق إلى الجزء ٣٠ بأسئلة جديدة في الأساليب والبلاغة والأحكام والعقيدة والأصول، ومعها ربعٌ من أسئلة المرحلة الأولى للمراجعة.</p></div>
+    <div class="card"><h3>الوحدات والجولات الختامية</h3><p>كل خمسة أجزاء وحدة، تُختم بجولة من ١٥ سؤالًا من أجزائها، وبها تُفتح الوحدة التالية.</p></div>
+    <div class="card"><h3>مراجعة الدخول</h3><p>قبل كل جزء جديد ٥ أسئلة من كل جزء من الأجزاء الستة السابقة (٣٠ سؤالًا حدًّا أعلى)، ولا تُطلب أول كل وحدة لأن الجولة الختامية تسبقها.</p></div>
+    <div class="card"><h3>القلوب</h3><p>خمسة قلوب، ينقص قلبٌ مع كل خطأ في الدروس والاختبارات، وتمتلئ كلها بعد ٨ ساعات. والمراجعة والتدريب بلا قلوب، و«بلس» اختياري للقلوب غير المحدودة.</p></div>
+    <div class="card"><h3>تحدَّ صديقًا</h3><p>عشرة أسئلة ثابتة تُرسَل برمز أو رابط، فيجيب الصديق عنها بالترتيب نفسه، ويفوز الأكثر صوابًا ثم الأسرع.</p></div>
+  </div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٢</span></div>
+</section>
+
+<!-- ============ ١ج. المحتوى ============ -->
+<section class="page">
+  <div class="eyebrow">٠٠ — المحتوى</div>
+  <h2>المحاور والمصادر</h2>
+  <div class="grid2" style="align-items:start">
+    <table class="axes"><thead><tr><th>المحور</th><th>الأسئلة</th><th>المرحلة</th></tr></thead><tbody><tr><td>غريب المفردات</td><td class="num">٦١٤</td><td>الأولى</td></tr><tr><td>أسباب النزول</td><td class="num">٣٢١</td><td>الأولى</td></tr><tr><td>التعريف بالسورة ومقاصدها</td><td class="num">١٥٨</td><td>الأولى</td></tr><tr><td>التفسير الإجمالي والتحليلي</td><td class="num">١٢٤</td><td>الأولى</td></tr><tr><td>المكي والمدني</td><td class="num">١٢٠</td><td>الأولى</td></tr><tr><td>المتشابه اللفظي</td><td class="num">١٠٠</td><td>الأولى</td></tr><tr><td>القراءات</td><td class="num">٩٠</td><td>الأولى</td></tr><tr><td>الهدايات والفوائد</td><td class="num">٧٩</td><td>الأولى</td></tr><tr><td>الأحاديث والآثار</td><td class="num">٣١</td><td>الأولى</td></tr><tr><td>المناسبة والسياق</td><td class="num">٣٠</td><td>الأولى</td></tr><tr><td>أساليب القرآن</td><td class="num">١٣٠</td><td>الثانية</td></tr><tr><td>البلاغة والإعراب</td><td class="num">١٢٨</td><td>الثانية</td></tr><tr><td>المسائل العقدية</td><td class="num">٦٠</td><td>الثانية</td></tr><tr><td>الأحكام الفقهية</td><td class="num">٥٩</td><td>الثانية</td></tr><tr><td>الدلالات الأصولية</td><td class="num">٥٨</td><td>الثانية</td></tr></tbody></table>
+    <div>
+      <h3>أهم المصادر</h3>
+      <ul class="tight">
+        <li>المختصر في التفسير (مركز تفسير)</li>
+        <li>تفسير غريب القرآن لابن قتيبة بتحقيق السيد أحمد صقر</li>
+        <li>كلمات القرآن تفسير وبيان لحسنين مخلوف، مع «التعقبات المفيدة» للخميس</li>
+        <li>دراسات لأسلوب القرآن الكريم لمحمد عبد الخالق عضيمة</li>
+        <li>الصحيح المسند من أسباب النزول للوادعي، والاستيعاب في بيان الأسباب، وصحيح المنقولات</li>
+        <li>النشر في القراءات العشر لابن الجزري</li>
+        <li>تفسير ابن كثير، والسعدي، والتحرير والتنوير، والجامع لأحكام القرآن للقرطبي، وروضة الناظر</li>
+      </ul>
+      <h3>منهج المحتوى</h3>
+      <ul class="tight">
+        <li>الصياغة من عندنا، والمعنى منسوب إلى مصدره مع رقم الصفحة حيث تحقّق.</li>
+        <li>ما وُثّق نصّه من المكتبة الشاملة يحمل علامة «موثّق».</li>
+        <li>في أسباب النزول تُقدَّم الروايات الصحيحة، ويُبيَّن حكم الضعيف.</li>
+        <li>تُخفى الآية إذا كانت تكشف الجواب، وتظهر بعد الإجابة.</li>
+        <li>تتبدّل مواضع الخيارات عند تكرار السؤال، وتتقارب أطوالها حتى لا يدلّ الطول على الجواب.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٣</span></div>
 </section>
 
 <!-- ============ ٢. الفكرة ============ -->
@@ -170,7 +237,7 @@
     <div class="card"><b>مشجّع</b><p class="muted">يحتفي بالتقدّم ويخفّف الخطأ: «لا بأس، المراجعة طريق الإتقان».</p></div>
     <div class="card"><b>دقيق</b><p class="muted">يذكر المصدر بعد كل معلومة، ويميّز الموثّق من المرجع العام.</p></div>
   </div>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٢</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٤</span></div>
 </section>
 
 <!-- ============ ٣. الشعار ============ -->
@@ -204,7 +271,7 @@
     <div class="tile ivory dont"><div class="wordmark" style="text-shadow:0 2mm 3mm rgba(0,0,0,.4)">مسابقات قرآنية</div></div>
   </div>
   <p class="muted" style="font-size:10pt">لا تمطّ العلامة ولا تغيّر ألوانها ولا تضف إليها ظلالًا أو تدرّجات أو رموزًا تعبيرية.</p>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٣</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٥</span></div>
 </section>
 
 <!-- ============ ٤. الألوان ============ -->
@@ -223,7 +290,7 @@
   <div class="grid6" id="semantic"></div>
   <h3>ألوان المحاور الثلاثة عشر</h3>
   <div class="topics" id="topics"></div>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٤</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٦</span></div>
 </section>
 
 <!-- ============ ٥. الخطوط ============ -->
@@ -250,7 +317,7 @@
     <li>لا يُكتب نص القرآن إلا بخط أميري، ولا يُكتب به غيره.</li>
     <li>الكوفي للعناوين القصيرة فقط؛ لا تكتب به فقرات ولا أسئلة.</li>
   </ul>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٥</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٧</span></div>
 </section>
 
 <!-- ============ ٦. الأيقونات ============ -->
@@ -270,7 +337,7 @@
   <div class="icons" id="ui-icons"></div>
   <h3>المحاور</h3>
   <div class="icons" id="topic-icons"></div>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٦</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٨</span></div>
 </section>
 
 <!-- ============ ٧. العناصر ============ -->
@@ -293,7 +360,7 @@
     <div><h3>الأزرار</h3><div class="btns"><span class="btn p">تحقّق</span><span class="btn g">اشترك الآن</span><span class="btn o">لاحقًا</span></div></div>
     <div><h3>شارات المحاور</h3><div class="btns" id="chips"></div></div>
   </div>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٧</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٩</span></div>
 </section>
 
 <!-- ============ ٨. النبرة ============ -->
@@ -316,7 +383,7 @@
     <li>ما فيه خلاف يُنسب: «قيل»، «ذكر المفسرون»، «رُوي»؛ ولا يُقدَّم الضعيف على أنه ثابت.</li>
     <li>الاشتراك عرضٌ لمن يرغب، لا ضغط؛ ولا يُقفل العلم خلف الدفع.</li>
   </ul>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٨</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>١٠</span></div>
 </section>
 
 <!-- ============ ٩. التطبيق ============ -->
@@ -333,7 +400,7 @@
     <div><div class="shot"><img src="img/lesson-dark.png" alt=""></div><div class="caption">السؤال — داكن</div></div>
     <div><div class="shot"><img src="img/feedback-dark.png" alt=""></div><div class="caption">الشرح — داكن</div></div>
   </div>
-  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>٩</span></div>
+  <div class="folio"><span>مسابقات قرآنية — دليل الهوية</span><span>١١</span></div>
 </section>
 
 <script src="../js/icons.js"></script>
