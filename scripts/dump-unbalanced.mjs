@@ -1,7 +1,7 @@
 // يطبع أسئلة الاختيار التي يكون فيها الجواب الصحيح أطول الخيارات (لإعادة موازنتها)
 import { readFileSync, existsSync } from "node:fs";
 import vm from "node:vm";
-const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/cite-iq.js", "js/removed.js"];
+const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/cite-iq.js", "js/removed.js"];
 if (existsSync("js/balance.js")) files.push("js/balance.js");
 const ctx = {}; vm.createContext(ctx);
 vm.runInContext(files.map((f) => readFileSync(f, "utf8")).join("\n") + ";this.S=STAGES", ctx);
