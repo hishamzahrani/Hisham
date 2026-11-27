@@ -1182,6 +1182,8 @@ function addQ(juz, list) {
   const s = STAGES.find((x) => x.juz === juz);
   if (s) s.questions.push(...list);
 }
+/** إضافة أسئلة تخص المرحلة الثانية وإن كانت من محاور الأولى */
+function addQ2(juz, list) { list.forEach((q) => (q.rd = 2)); addQ(juz, list); }
 
 /** المراجع العامة لكل محور عند عدم ذكر مصدر خاص للسؤال */
 const DEFAULT_REFS = {

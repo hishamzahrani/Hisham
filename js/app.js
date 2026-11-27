@@ -24,7 +24,9 @@
   const OLD_SHARE = 0.25;       // نسبة أسئلة المرحلة الأولى في دروس المرحلة الثانية
   const MIN_LESSONS2 = 2, LESSON_SIZE2 = 6;
   let ROUND = 1;                // المرحلة المعروضة حاليًا
-  const inRound = (q, r) => (r === 2 ? ADV_CATS.includes(q.c) : !ADV_CATS.includes(q.c));
+  // q.rd === 2: سؤال من محاور المرحلة الأولى أُضيف للمرحلة الثانية خاصة (كالمفردات الجديدة)
+  const isR2 = (q) => q.rd === 2 || ADV_CATS.includes(q.c);
+  const inRound = (q, r) => (r === 2 ? isR2(q) : !isR2(q));
   const lessonsOf = (j, r = ROUND) => {
     const st = STAGES.find((x) => x.juz === +j);
     const n = st ? st.questions.filter((q) => !q.off && inRound(q, r)).length : 0;

@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import vm from "node:vm";
 
-const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/cite-iq.js", "js/removed.js", "js/balance.js"];
+const files = ["js/icons.js", "js/config.js", "js/data.js", ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26].map((i) => `js/more-${i}.js`), "js/cite-mkh.js", "js/audit.js", "js/cite-wadii.js", "js/verified.js", "js/cite-iq.js", "js/removed.js", "js/balance.js"];
 const code = files.map((f) => readFileSync(f, "utf8")).join("\n") +
   "\n;this.__out = { STAGES, CATEGORIES, sourceOf };";
 const ctx = {};
@@ -20,7 +20,7 @@ for (const st of STAGES) {
   // المرحلة الأولى: المحاور الأساسية؛ المرحلة الثانية: المحاور المتقدمة (مطابق لـ app.js)
   const lessonOf = {};
   for (const r of [1, 2]) {
-    const its = items.filter((it) => (r === 2) === ADV_CATS.includes(it.q.c));
+    const its = items.filter((it) => (r === 2) === (it.q.rd === 2 || ADV_CATS.includes(it.q.c)));
     const ordered = CAT_ORDER.flatMap((c) => its.filter((it) => it.q.c === c));
     const L = r === 2 ? Math.max(2, Math.ceil(its.length / 6)) : Math.max(MIN_LESSONS, Math.ceil(its.length / LESSON_SIZE));
     ordered.forEach((it, n) => (lessonOf[it.i] = r === 2 ? `م٢ - ${(n % L) + 1}` : (n % L) + 1));
