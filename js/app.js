@@ -284,20 +284,29 @@
   }
   // ---------- القلوب: مشتركة بين الدروس، وتمتلئ بعد مدة الانتظار ----------
   const HEARTS_MAX = (M.hearts && M.hearts.max) || 5;
-  const REFILL_MS = ((M.hearts && M.hearts.refillHours) || 8) * 3600e3;
+  // يعود قلب واحد كل HEART_MS، فتمتلئ كلها بعد HEARTS_MAX × HEART_MS
+  const HEART_MS = ((M.hearts && M.hearts.heartEveryHours) || 1) * 3600e3;
+  const REFILL_MS = HEARTS_MAX * HEART_MS;
   function syncHearts() {
     const h = state.hearts || (state.hearts = { count: HEARTS_MAX, refillAt: null });
-    // إن قصُرت مدة الامتلاء (كانت ١٦ ساعة) فلا ينتظر أحد أكثر من المدة الحالية
-    if (h.refillAt && h.refillAt - Date.now() > REFILL_MS) { h.refillAt = Date.now() + REFILL_MS; save(); }
-    if (h.refillAt && Date.now() >= h.refillAt) { h.count = HEARTS_MAX; h.refillAt = null; save(); }
+    // refillAt: موعد عودة القلب التالي. المواعيد المحفوظة بالنظام القديم (امتلاء كامل) لا تتجاوز ساعة
+    if (h.refillAt && h.refillAt - Date.now() > HEART_MS) { h.refillAt = Date.now() + HEART_MS; save(); }
+    let changed = false;
+    while (h.refillAt && Date.now() >= h.refillAt && h.count < HEARTS_MAX) {
+      h.count++; h.refillAt = h.count < HEARTS_MAX ? h.refillAt + HEART_MS : null; changed = true;
+    }
+    if (h.refillAt && h.count >= HEARTS_MAX) { h.refillAt = null; changed = true; }
+    if (changed) save();
     return h;
   }
+  /** المتبقي حتى تمتلئ القلوب كلها */
+  const fullAt = (h) => h.refillAt + (HEARTS_MAX - h.count - 1) * HEART_MS;
   const heartsLeft = () => (isPremium() ? Infinity : syncHearts().count);
   function loseHeart() {
     if (isPremium()) return;
     const h = syncHearts();
     h.count = Math.max(0, h.count - 1);
-    if (!h.refillAt) h.refillAt = Date.now() + REFILL_MS;   // يبدأ العدّ من أول قلب يُفقد
+    if (!h.refillAt) h.refillAt = Date.now() + HEART_MS;   // يبدأ العدّ من أول قلب يُفقد
     save();
   }
   function fmtLeft(ms) {
@@ -632,10 +641,10 @@
       $("h-icons").innerHTML = Array.from({ length: HEARTS_MAX }, (_, i) =>
         `<span class="${prem || i < h.count ? "on" : "off"}">${ic("heart", "", true)}</span>`).join("");
       $("h-title").textContent = prem ? "قلوب غير محدودة" : h.count === 0 ? "نفدت قلوبك" : h.count < HEARTS_MAX ? "قلوبك" : "قلوبك ممتلئة";
-      $("h-timer").textContent = !prem && h.refillAt ? `تمتلئ كلها بعد ${fmtLeft(h.refillAt - Date.now())}` : "";
+      $("h-timer").textContent = !prem && h.refillAt ? `قلب جديد بعد ${fmtLeft(h.refillAt - Date.now())}` + (h.count < HEARTS_MAX - 1 ? ` · تمتلئ كلها بعد ${fmtLeft(fullAt(h) - Date.now())}` : "") : "";
       $("h-sub").textContent = prem ? "شكرًا لاشتراكك في «بلس»" :
-        h.count === 0 ? "انتظر حتى تمتلئ قلوبك، وتستطيع خلال ذلك مراجعة أخطائك والتدرّب على المحاور دون أن تخسر قلوبًا." :
-        `كل خطأ في الدروس يُنقص قلبًا، وتمتلئ القلوب بعد ${toAr(REFILL_MS / 3600e3)} ساعة من أول قلب تخسره.`;
+        h.count === 0 ? "انتظر حتى يعود إليك قلب، وتستطيع خلال ذلك مراجعة أخطائك والتدرّب على المحاور دون أن تخسر قلوبًا." :
+        `كل خطأ في الدروس يُنقص قلبًا، ويعود إليك قلب كل ساعة، فتمتلئ كلها خلال ${toAr(REFILL_MS / 3600e3)} ساعات.`;
       $("h-plus").hidden = prem || !M.enabled;
       renderHeartsBadge();
     };
@@ -1110,7 +1119,7 @@
     let sub = "";
     if (!passed) {
       const h = syncHearts();
-      sub = h.refillAt ? `لا بأس، المراجعة طريق الإتقان. تمتلئ قلوبك بعد ${fmtLeft(h.refillAt - Date.now())}، وتستطيع حتى ذلك الحين مراجعة أخطائك دون قلوب.` : "لا بأس، المراجعة طريق الإتقان. حاول مرة أخرى!";
+      sub = h.refillAt ? `لا بأس، المراجعة طريق الإتقان. يعود إليك قلب بعد ${fmtLeft(h.refillAt - Date.now())}، وتمتلئ كلها بعد ${fmtLeft(fullAt(h) - Date.now())}، وتستطيع حتى ذلك الحين مراجعة أخطائك دون قلوب.` : "لا بأس، المراجعة طريق الإتقان. حاول مرة أخرى!";
     }
     else if (isUnit) {
       const U = UNITS[u];
